@@ -1,0 +1,45 @@
+curl.exe -X POST "http://localhost:3000/api/membre/ajouter" `
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIsImZhbWlsbGVJZCI6Miwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzYwOTcxMTczLCJleHAiOjE3NjE1NzU5NzN9.Jf8LVICIJjNUA_dWa2EnMYTj3mzDDiM1dRRR_baAm9c" `
+  -F "nom=Diop" `
+  -F "prenom=Amadou Doudou" `
+  -F "sexe=M" `
+  -F "dateNaissance=1920-01-01" `
+  -F "lieuNaissance=Bode Lao" `
+  -F "profession=Maitre coranique" `
+  -F "lieuResidence=Bode Lao" `
+  -F "nomConjoint=Aissata Ly" `
+  -F "date_deces=2001-01-01" `
+  -F "lieu_deces=Bode Lao" `
+  -F "photo=@C:\Users\the king\Documents\Projet_Arbre\backend\uploads\photos\bayla.jpeg"
+
+
+  curl.exe -X POST "http://localhost:3000/api/membre/ajouter" `
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIsImZhbWlsbGVJZCI6Miwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzYwOTcxMTczLCJleHAiOjE3NjE1NzU5NzN9.Jf8LVICIJjNUA_dWa2EnMYTj3mzDDiM1dRRR_baAm9c" `
+  -F "nom=Diop" `
+  -F "prenom=Lamine Amadou" `
+  -F "sexe=M" `
+  -F "dateNaissance=1985-01-01" `
+  -F "profession=Enseignant" `
+  -F "lieuNaissance=Dakar" `
+  -F "lieuResidence=Dakar" `
+  -F "nomConjoint=Racky Ly" `
+  -F "pereId=1" `
+  -F "mereId=2" `
+  -F "photo=@C:\Users\the king\Documents\Projet_Arbre\backend\uploads\photos\bayla.jpeg"
+
+
+curl.exe -X POST "http://localhost:3000/api/membre/recherche/lien-parente" `
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIsImZhbWlsbGVJZCI6Miwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzYwOTcxMTczLCJleHAiOjE3NjE1NzU5NzN9.Jf8LVICIJjNUA_dWa2EnMYTj3mzDDiM1dRRR_baAm9c" `
+  -H "Content-Type: application/json" `
+  -d '{"membreId1":3,"membreId2":3}'
+
+
+curl.exe -X POST "http://localhost:3000/api/musee/ajouter" `
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIsImZhbWlsbGVJZCI6Miwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzYxMTQ1MjA3LCJleHAiOjE3NjE3NTAwMDd9.jnewRxSwEmPN_VmVaf-0pxSzaUxs0auaHjAkc0sIqRU" `
+  -F "nomObjet=Statue ancienne" `
+  -F "description=Une statue transmise depuis 3 générations" `
+  -F "proprietaireId=2" `
+  -F "estCommun=--true" `
+  -F "image=@C:\Users\the king\Documents\Projet_Arbre\backend\uploads\photos\musee.jpg"
+
+  curl.exe -X POST "http://localhost:3000/api/cotisation/depense" -H "Authorization: Bearer <TOKEN_TRESORIER>" -H "Content-Type: application/json" -d "{\"ceremonieId\":1,\"libelle\":\"Location salle\",\"montant\":500,\"description\":\"Location salle pour mariage\",\"justificatif\":\"facture123.pdf\"}"

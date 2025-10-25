@@ -1,0 +1,4 @@
+curl -X POST http://localhost:3000/api/ceremonie/ajouter `
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." `
+  -H "Content-Type: application/json" `
+  -d "@ceremonie.json"
