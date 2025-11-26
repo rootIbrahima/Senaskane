@@ -4,7 +4,11 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
-require('dotenv').config();
+
+// Charger .env uniquement en développement
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
 
 // Import des routes
 const authRoutes = require('./routes/auth');
