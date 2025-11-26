@@ -102,6 +102,60 @@ CREATE TABLE parrain_marraine (
     FOREIGN KEY (membre_id) REFERENCES membre(id) ON DELETE CASCADE
 );
 
+-- Table des organisateurs de cérémonies
+CREATE TABLE organisateur_ceremonie (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ceremonie_id INT NOT NULL,
+    membre_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ceremonie_id) REFERENCES ceremonie(id) ON DELETE CASCADE,
+    FOREIGN KEY (membre_id) REFERENCES membre(id) ON DELETE CASCADE
+);
+
+-- Table des trésoriers de cérémonies (pour tours de famille/ziar)
+CREATE TABLE tresorier_ceremonie (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ceremonie_id INT NOT NULL,
+    utilisateur_id INT NOT NULL, -- L'utilisateur désigné comme trésorier
+    membre_id INT, -- Le membre correspondant dans l'arbre (optionnel)
+    date_designation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ceremonie_id) REFERENCES ceremonie(id) ON DELETE CASCADE,
+    FOREIGN KEY (utilisateur_id) REFERENCES utilisateur(id) ON DELETE CASCADE,
+    FOREIGN KEY (membre_id) REFERENCES membre(id) ON DELETE SET NULL,
+    UNIQUE KEY unique_tresorier_ceremonie (ceremonie_id)
+);
+
+-- Table des recettes pour cérémonies (cotisations, dons, etc.)
+CREATE TABLE recette_ceremonie (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ceremonie_id INT NOT NULL,
+    type_recette ENUM('cotisation', 'don', 'autre') NOT NULL,
+    description VARCHAR(255),
+    montant DECIMAL(10,2) NOT NULL,
+    contributeur_nom VARCHAR(200), -- Nom du contributeur
+    contributeur_membre_id INT, -- Lien avec membre si applicable
+    date_recette DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (ceremonie_id) REFERENCES ceremonie(id) ON DELETE CASCADE,
+    FOREIGN KEY (contributeur_membre_id) REFERENCES membre(id) ON DELETE SET NULL
+);
+
+-- Table des dépenses pour cérémonies
+CREATE TABLE depense_ceremonie (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ceremonie_id INT NOT NULL,
+    rubrique ENUM('bache', 'chaises', 'sonorisation', 'repas', 'honoraires', 'transport', 'habillement', 'autre') NOT NULL,
+    description VARCHAR(255),
+    montant DECIMAL(10,2) NOT NULL,
+    beneficiaire VARCHAR(200), -- Nom du bénéficiaire/fournisseur
+    date_depense DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (ceremonie_id) REFERENCES ceremonie(id) ON DELETE CASCADE
+);
+
 -- Table du musée familial
 CREATE TABLE musee_familial (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -172,6 +226,10 @@ CREATE INDEX idx_ceremonie_famille ON ceremonie(famille_id);
 CREATE INDEX idx_ceremonie_date ON ceremonie(date_ceremonie);
 CREATE INDEX idx_musee_famille ON musee_familial(famille_id);
 CREATE INDEX idx_bande_famille ON bande_passante(famille_id);
+CREATE INDEX idx_recette_ceremonie ON recette_ceremonie(ceremonie_id);
+CREATE INDEX idx_depense_ceremonie ON depense_ceremonie(ceremonie_id);
+CREATE INDEX idx_organisateur_ceremonie ON organisateur_ceremonie(ceremonie_id);
+CREATE INDEX idx_tresorier_ceremonie ON tresorier_ceremonie(ceremonie_id);
 
 -- Triggers pour générer automatiquement les numéros d'identification
 DELIMITER //

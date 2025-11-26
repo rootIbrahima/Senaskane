@@ -25,7 +25,11 @@ const app = express();
 // ===========================
 
 // Helmet pour sécuriser les headers HTTP
-app.use(helmet());
+// Configuration Helmet pour permettre le chargement des images
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: false, // Désactivé pour permettre le chargement des images
+}));
 
 // CORS - Autoriser les requêtes cross-origin
 const corsOptions = {
@@ -54,11 +58,16 @@ app.use('/api/', limiter);
 // Rate limiting plus strict pour l'authentification
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 5, // 5 tentatives de connexion max
+    max: 100, // Augmenté pour le développement (était 5)
     message: 'Trop de tentatives de connexion, veuillez réessayer dans 15 minutes.',
 });
 
-app.use('/api/auth/login', authLimiter);
+// Désactiver le rate limiter en développement
+if (process.env.NODE_ENV === 'development') {
+    console.log('⚠️  Rate limiting désactivé en mode développement');
+} else {
+    app.use('/api/auth/login', authLimiter);
+}
 
 // ===========================
 // ROUTES STATIQUES
@@ -275,12 +284,14 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 // Gestion des erreurs non capturées
 process.on('uncaughtException', (err) => {
     console.error('❌ Exception non capturée:', err);
-    gracefulShutdown('uncaughtException');
+    console.error('Le serveur continue de fonctionner...');
+    // gracefulShutdown('uncaughtException'); // Commenté pour debug
 });
 
 process.on('unhandledRejection', (reason, promise) => {
     console.error('❌ Promesse rejetée non gérée:', reason);
-    gracefulShutdown('unhandledRejection');
+    console.error('Le serveur continue de fonctionner...');
+    // gracefulShutdown('unhandledRejection'); // Commenté pour debug
 });
 
 // Export pour les tests

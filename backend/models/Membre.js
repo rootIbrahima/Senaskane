@@ -111,8 +111,8 @@ class Membre {
             );
 
             // Récupérer tous les liens parentaux
-            const [liens] = await db.execute(
-                `SELECT lp.*, 
+            const [liensParentaux] = await db.execute(
+                `SELECT lp.*,
                 m1.nom as enfant_nom, m1.prenom as enfant_prenom, m1.numero_identification as enfant_numero,
                 m2.nom as parent_nom, m2.prenom as parent_prenom, m2.numero_identification as parent_numero
                 FROM lien_parental lp
@@ -122,9 +122,29 @@ class Membre {
                 [familleId]
             );
 
+            // Récupérer tous les mariages/unions
+            let mariages = [];
+            try {
+                const [mariagesResult] = await db.execute(
+                    `SELECT m.*,
+                    m1.nom as conjoint1_nom, m1.prenom as conjoint1_prenom, m1.numero_identification as conjoint1_numero,
+                    m2.nom as conjoint2_nom, m2.prenom as conjoint2_prenom, m2.numero_identification as conjoint2_numero
+                    FROM mariage m
+                    JOIN membre m1 ON m.conjoint1_id = m1.id
+                    JOIN membre m2 ON m.conjoint2_id = m2.id
+                    WHERE m.famille_id = ?`,
+                    [familleId]
+                );
+                mariages = mariagesResult;
+            } catch (error) {
+                // Table mariage n'existe peut-être pas encore
+                console.warn('Table mariage non disponible:', error.message);
+            }
+
             return {
                 membres,
-                liens
+                liens: liensParentaux,
+                mariages
             };
         } catch (error) {
             throw new Error('Erreur lors de la récupération de l\'arbre: ' + error.message);

@@ -217,4 +217,242 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
     }
 });
 
+// ==================== GESTION FINANCIÈRE ====================
+
+/**
+ * POST /api/ceremonie/:id/organisateur
+ * Ajouter un organisateur à une cérémonie
+ */
+router.post('/:id/organisateur', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const ceremonieId = parseInt(req.params.id);
+        const { membreId } = req.body;
+
+        await db.execute(
+            'INSERT INTO organisateur_ceremonie (ceremonie_id, membre_id) VALUES (?, ?)',
+            [ceremonieId, membreId]
+        );
+
+        res.status(201).json({ message: 'Organisateur ajouté avec succès' });
+
+    } catch (error) {
+        console.error('Erreur ajout organisateur:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * POST /api/ceremonie/:id/recette
+ * Ajouter une recette (cotisation, don, etc.)
+ */
+router.post('/:id/recette', authenticateToken, requireAdmin, [
+    body('typeRecette').isIn(['cotisation', 'don', 'autre']),
+    body('montant').isFloat({ min: 0 }).withMessage('Montant invalide'),
+    body('dateRecette').isDate().withMessage('Date invalide')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const ceremonieId = parseInt(req.params.id);
+        const { typeRecette, description, montant, contributeurNom, contributeurMembreId, dateRecette } = req.body;
+
+        const [result] = await db.execute(
+            `INSERT INTO recette_ceremonie
+            (ceremonie_id, type_recette, description, montant, contributeur_nom, contributeur_membre_id, date_recette)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [ceremonieId, typeRecette, description, montant, contributeurNom, contributeurMembreId || null, dateRecette]
+        );
+
+        res.status(201).json({
+            message: 'Recette ajoutée avec succès',
+            data: { id: result.insertId }
+        });
+
+    } catch (error) {
+        console.error('Erreur ajout recette:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * GET /api/ceremonie/:id/recettes
+ * Obtenir toutes les recettes d'une cérémonie
+ */
+router.get('/:id/recettes', authenticateToken, async (req, res) => {
+    try {
+        const ceremonieId = parseInt(req.params.id);
+
+        const [recettes] = await db.execute(
+            `SELECT r.*, m.nom as membre_nom, m.prenom as membre_prenom
+            FROM recette_ceremonie r
+            LEFT JOIN membre m ON r.contributeur_membre_id = m.id
+            WHERE r.ceremonie_id = ?
+            ORDER BY r.date_recette DESC`,
+            [ceremonieId]
+        );
+
+        res.json({ data: recettes });
+
+    } catch (error) {
+        console.error('Erreur récupération recettes:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * DELETE /api/ceremonie/:id/recette/:recetteId
+ * Supprimer une recette
+ */
+router.delete('/:id/recette/:recetteId', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const recetteId = parseInt(req.params.recetteId);
+
+        await db.execute('DELETE FROM recette_ceremonie WHERE id = ?', [recetteId]);
+
+        res.json({ message: 'Recette supprimée avec succès' });
+
+    } catch (error) {
+        console.error('Erreur suppression recette:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * POST /api/ceremonie/:id/depense
+ * Ajouter une dépense
+ */
+router.post('/:id/depense', authenticateToken, requireAdmin, [
+    body('rubrique').isIn(['bache', 'chaises', 'sonorisation', 'repas', 'honoraires', 'transport', 'habillement', 'autre']),
+    body('montant').isFloat({ min: 0 }).withMessage('Montant invalide'),
+    body('dateDepense').isDate().withMessage('Date invalide')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const ceremonieId = parseInt(req.params.id);
+        const { rubrique, description, montant, beneficiaire, dateDepense } = req.body;
+
+        const [result] = await db.execute(
+            `INSERT INTO depense_ceremonie
+            (ceremonie_id, rubrique, description, montant, beneficiaire, date_depense)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+            [ceremonieId, rubrique, description, montant, beneficiaire, dateDepense]
+        );
+
+        res.status(201).json({
+            message: 'Dépense ajoutée avec succès',
+            data: { id: result.insertId }
+        });
+
+    } catch (error) {
+        console.error('Erreur ajout dépense:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * GET /api/ceremonie/:id/depenses
+ * Obtenir toutes les dépenses d'une cérémonie
+ */
+router.get('/:id/depenses', authenticateToken, async (req, res) => {
+    try {
+        const ceremonieId = parseInt(req.params.id);
+
+        const [depenses] = await db.execute(
+            `SELECT * FROM depense_ceremonie
+            WHERE ceremonie_id = ?
+            ORDER BY date_depense DESC`,
+            [ceremonieId]
+        );
+
+        res.json({ data: depenses });
+
+    } catch (error) {
+        console.error('Erreur récupération dépenses:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * DELETE /api/ceremonie/:id/depense/:depenseId
+ * Supprimer une dépense
+ */
+router.delete('/:id/depense/:depenseId', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const depenseId = parseInt(req.params.depenseId);
+
+        await db.execute('DELETE FROM depense_ceremonie WHERE id = ?', [depenseId]);
+
+        res.json({ message: 'Dépense supprimée avec succès' });
+
+    } catch (error) {
+        console.error('Erreur suppression dépense:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * GET /api/ceremonie/:id/bilan
+ * Obtenir le bilan financier d'une cérémonie (recettes, dépenses, solde)
+ */
+router.get('/:id/bilan', authenticateToken, async (req, res) => {
+    try {
+        const ceremonieId = parseInt(req.params.id);
+
+        // Total des recettes
+        const [recettesResult] = await db.execute(
+            'SELECT COALESCE(SUM(montant), 0) as total FROM recette_ceremonie WHERE ceremonie_id = ?',
+            [ceremonieId]
+        );
+
+        // Total des dépenses
+        const [depensesResult] = await db.execute(
+            'SELECT COALESCE(SUM(montant), 0) as total FROM depense_ceremonie WHERE ceremonie_id = ?',
+            [ceremonieId]
+        );
+
+        // Détails par type de recette
+        const [recettesParType] = await db.execute(
+            `SELECT type_recette, COALESCE(SUM(montant), 0) as total
+            FROM recette_ceremonie
+            WHERE ceremonie_id = ?
+            GROUP BY type_recette`,
+            [ceremonieId]
+        );
+
+        // Détails par rubrique de dépense
+        const [depensesParRubrique] = await db.execute(
+            `SELECT rubrique, COALESCE(SUM(montant), 0) as total
+            FROM depense_ceremonie
+            WHERE ceremonie_id = ?
+            GROUP BY rubrique`,
+            [ceremonieId]
+        );
+
+        const totalRecettes = parseFloat(recettesResult[0].total);
+        const totalDepenses = parseFloat(depensesResult[0].total);
+        const solde = totalRecettes - totalDepenses;
+
+        res.json({
+            data: {
+                totalRecettes,
+                totalDepenses,
+                solde,
+                recettesParType,
+                depensesParRubrique
+            }
+        });
+
+    } catch (error) {
+        console.error('Erreur récupération bilan:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;

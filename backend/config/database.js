@@ -3,8 +3,8 @@ const mysql = require('mysql2/promise');
 
 const dbConfig = {
     host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'amadou',
-    password: process.env.DB_PASSWORD || 'P@sser2002',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'senaskane_db',
     waitForConnections: true,
     connectionLimit: 10,
