@@ -3,6 +3,7 @@ const db = require('../config/database');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 class InvitationService {
     
@@ -70,9 +71,9 @@ class InvitationService {
     static async envoyerInvitation(utilisateurId, moyenCommunication = 'sms') {
         try {
             const [utilisateur] = await db.execute(
-                `SELECT u.*, f.nom as famille_nom 
-                FROM utilisateur u 
-                JOIN famille f ON u.famille_id = f.id 
+                `SELECT u.*, f.nom as famille_nom
+                FROM utilisateur u
+                JOIN famille f ON u.famille_id = f.id
                 WHERE u.id = ?`,
                 [utilisateurId]
             );
@@ -82,7 +83,7 @@ class InvitationService {
             }
 
             const user = utilisateur[0];
-            
+
             const message = `
 Bonjour ${user.prenom} ${user.nom},
 
@@ -95,38 +96,65 @@ Code d'activation: ${user.code_activation}
 Téléchargez l'application Senaskane et utilisez ce code pour activer votre compte.
             `.trim();
 
-            let resultat = { success: false, moyen: moyenCommunication };
+            // Préparer le résultat avec les identifiants (toujours retournés)
+            let resultat = {
+                success: false,
+                moyen: moyenCommunication,
+                credentials: {
+                    login: user.login,
+                    codeActivation: user.code_activation,
+                    nom: user.nom,
+                    prenom: user.prenom,
+                    email: user.email,
+                    telephone: user.telephone
+                },
+                emailSent: false,
+                smsSent: false,
+                error: null
+            };
 
             if (moyenCommunication === 'email' && user.email) {
                 try {
                     await this.envoyerEmail(user.email, 'Invitation Senaskane', message);
                     resultat.success = true;
+                    resultat.emailSent = true;
                     console.log(`✅ Email envoyé avec succès à ${user.email}`);
                 } catch (error) {
                     console.error('❌ Erreur envoi email:', error.message);
-                    throw error;
+                    resultat.error = error.message;
+                    // Ne pas throw - on retourne quand même les credentials
+                    console.log('⚠️ Email non envoyé, mais les identifiants sont disponibles');
                 }
             } else if (moyenCommunication === 'sms' && user.telephone) {
                 try {
                     await this.envoyerSMS(user.telephone, message);
                     resultat.success = true;
+                    resultat.smsSent = true;
                     console.log(`✅ SMS envoyé avec succès à ${user.telephone}`);
                 } catch (error) {
                     console.error('❌ Erreur envoi SMS:', error.message);
                     // Essayer l'email en fallback si disponible
                     if (user.email) {
                         console.log('🔄 Tentative d\'envoi par email en fallback...');
-                        await this.envoyerEmail(user.email, 'Invitation Senaskane', message);
-                        resultat.moyen = 'email';
-                        resultat.success = true;
+                        try {
+                            await this.envoyerEmail(user.email, 'Invitation Senaskane', message);
+                            resultat.moyen = 'email';
+                            resultat.success = true;
+                            resultat.emailSent = true;
+                            console.log('✅ Email de fallback envoyé avec succès');
+                        } catch (emailError) {
+                            console.error('❌ Email de fallback a aussi échoué:', emailError.message);
+                            resultat.error = `SMS: ${error.message}, Email: ${emailError.message}`;
+                        }
                     } else {
-                        throw error;
+                        resultat.error = error.message;
                     }
                 }
             } else {
-                throw new Error(`Moyen de communication non disponible: ${moyenCommunication}`);
+                resultat.error = `Moyen de communication non disponible: ${moyenCommunication}`;
             }
 
+            // Toujours retourner le résultat avec les credentials, même si l'envoi a échoué
             return resultat;
 
         } catch (error) {
@@ -172,68 +200,118 @@ Téléchargez l'application Senaskane et utilisez ce code pour activer votre com
     }
 
     /**
-     * Envoyer un Email avec nodemailer
+     * Créer le template HTML pour les emails
      */
-    static async envoyerEmail(email, sujet, message) {
+    static creerTemplateEmail(message) {
+        return `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background: #2c5530; color: white; padding: 20px; text-align: center; }
+                    .content { background: #f9f9f9; padding: 30px; border-radius: 5px; margin: 20px 0; }
+                    .credentials { background: white; padding: 20px; border-left: 4px solid #2c5530; margin: 20px 0; }
+                    .footer { text-align: center; color: #666; font-size: 12px; margin-top: 30px; }
+                    .button { display: inline-block; padding: 12px 30px; background: #2c5530; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🌳 Senaskane</h1>
+                    </div>
+                    <div class="content">
+                        ${message.split('\n').map(line => `<p>${line}</p>`).join('')}
+                    </div>
+                    <div class="footer">
+                        <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
+                        <p>&copy; 2025 Senaskane - Plateforme de gestion familiale</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+    }
+
+    /**
+     * Envoyer un Email avec Resend (méthode prioritaire)
+     */
+    static async envoyerEmailResend(email, sujet, message) {
         try {
-            console.log('📧 Tentative d\'envoi d\'email à:', email);
+            console.log('📧 Envoi via Resend à:', email);
+
+            if (!process.env.RESEND_API_KEY) {
+                throw new Error('RESEND_API_KEY non configurée');
+            }
+
+            const resend = new Resend(process.env.RESEND_API_KEY);
+            const messageHtml = this.creerTemplateEmail(message);
+
+            const data = await resend.emails.send({
+                from: process.env.EMAIL_FROM || 'Senaskane <onboarding@resend.dev>',
+                to: [email],
+                subject: sujet,
+                html: messageHtml,
+                text: message
+            });
+
+            console.log('✅ Email envoyé via Resend:', data.id);
+            return { success: true, provider: 'resend', id: data.id };
+
+        } catch (error) {
+            console.error('❌ Erreur Resend:', error.message);
+            throw error;
+        }
+    }
+
+    /**
+     * Envoyer un Email avec SMTP (fallback)
+     */
+    static async envoyerEmailSMTP(email, sujet, message) {
+        try {
+            console.log('📧 Envoi via SMTP à:', email);
             console.log('📧 Configuration SMTP:', {
                 host: process.env.SMTP_HOST,
                 port: process.env.SMTP_PORT,
                 user: process.env.SMTP_USER
             });
 
-            // Configuration du transporteur SMTP
+            if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+                throw new Error('Configuration SMTP manquante');
+            }
+
+            // Configuration du transporteur SMTP avec timeout
             const transporter = nodemailer.createTransport({
                 host: process.env.SMTP_HOST || 'smtp.gmail.com',
                 port: parseInt(process.env.SMTP_PORT) || 587,
-                secure: false, // true pour le port 465, false pour les autres ports
+                secure: false,
                 auth: {
                     user: process.env.SMTP_USER,
                     pass: process.env.SMTP_PASS
                 },
                 tls: {
                     rejectUnauthorized: false
-                }
+                },
+                connectionTimeout: 10000, // 10 secondes max pour la connexion
+                greetingTimeout: 10000,   // 10 secondes max pour le greeting
+                socketTimeout: 10000      // 10 secondes max pour les commandes
             });
 
-            // Vérifier la connexion
+            // Vérifier la connexion avec timeout
             console.log('🔄 Vérification de la connexion SMTP...');
-            await transporter.verify();
+
+            const verifyPromise = transporter.verify();
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Timeout connexion SMTP')), 15000)
+            );
+
+            await Promise.race([verifyPromise, timeoutPromise]);
             console.log('✅ Connexion SMTP établie');
 
-            // Créer le message HTML
-            const messageHtml = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <style>
-                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                        .header { background: #2c5530; color: white; padding: 20px; text-align: center; }
-                        .content { background: #f9f9f9; padding: 30px; border-radius: 5px; margin: 20px 0; }
-                        .credentials { background: white; padding: 20px; border-left: 4px solid #2c5530; margin: 20px 0; }
-                        .footer { text-align: center; color: #666; font-size: 12px; margin-top: 30px; }
-                        .button { display: inline-block; padding: 12px 30px; background: #2c5530; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <div class="header">
-                            <h1>🌳 Senaskane</h1>
-                        </div>
-                        <div class="content">
-                            ${message.split('\n').map(line => `<p>${line}</p>`).join('')}
-                        </div>
-                        <div class="footer">
-                            <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
-                            <p>&copy; 2025 Senaskane - Plateforme de gestion familiale</p>
-                        </div>
-                    </div>
-                </body>
-                </html>
-            `;
+            const messageHtml = this.creerTemplateEmail(message);
 
             // Envoyer l'email
             const info = await transporter.sendMail({
@@ -244,13 +322,48 @@ Téléchargez l'application Senaskane et utilisez ce code pour activer votre com
                 html: messageHtml
             });
 
-            console.log('✅ Email envoyé:', info.messageId);
-            return info;
+            console.log('✅ Email envoyé via SMTP:', info.messageId);
+            return { success: true, provider: 'smtp', id: info.messageId };
 
         } catch (error) {
-            console.error('❌ Erreur détaillée envoi email:', error);
-            throw new Error(`Échec envoi email: ${error.message}`);
+            console.error('❌ Erreur SMTP:', error.message);
+            throw error;
         }
+    }
+
+    /**
+     * Envoyer un Email (avec fallback automatique)
+     */
+    static async envoyerEmail(email, sujet, message) {
+        let lastError = null;
+
+        // Essayer Resend en premier (si configuré)
+        if (process.env.RESEND_API_KEY) {
+            try {
+                return await this.envoyerEmailResend(email, sujet, message);
+            } catch (error) {
+                console.log('⚠️ Resend a échoué, tentative avec SMTP...');
+                lastError = error;
+            }
+        }
+
+        // Fallback sur SMTP
+        if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+            try {
+                return await this.envoyerEmailSMTP(email, sujet, message);
+            } catch (error) {
+                console.log('⚠️ SMTP a également échoué');
+                lastError = error;
+            }
+        }
+
+        // Si tout a échoué
+        const errorMsg = lastError
+            ? `Échec envoi email: ${lastError.message}`
+            : 'Aucun service d\'email configuré (RESEND_API_KEY ou SMTP)';
+
+        console.error('❌ Impossible d\'envoyer l\'email:', errorMsg);
+        throw new Error(errorMsg);
     }
 
     /**
