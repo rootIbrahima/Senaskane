@@ -24,6 +24,9 @@ const cotisationRoutes = require('./routes/cotisation');
 
 const app = express();
 
+// Trust proxy - Important pour Render/Heroku
+app.set('trust proxy', 1);
+
 // ===========================
 // MIDDLEWARE DE SÉCURITÉ
 // ===========================
