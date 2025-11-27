@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { COLORS, SPACING, FONT_SIZES } from '../utils/config';
 import { museeApi } from '../api/museeApi';
 import { membreApi } from '../api/membreApi';
@@ -40,7 +41,7 @@ export const AjouterObjetMuseeScreen = ({ navigation }) => {
     }
   };
 
-  const handleImagePick = () => {
+  const handleImagePick = async () => {
     if (Platform.OS === 'web') {
       const input = document.createElement('input');
       input.type = 'file';
@@ -58,7 +59,42 @@ export const AjouterObjetMuseeScreen = ({ navigation }) => {
       };
       input.click();
     } else {
-      Alert.alert('Info', 'Upload d\'image disponible sur web uniquement pour le moment');
+      // Mobile: demander les permissions et ouvrir la galerie
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (permissionResult.granted === false) {
+        Alert.alert(
+          'Permission requise',
+          'Vous devez autoriser l\'accès à la galerie pour sélectionner une image'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+
+        // Créer un objet File-like pour mobile
+        const uri = asset.uri;
+        const filename = uri.split('/').pop();
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+        const imageData = {
+          uri,
+          name: filename,
+          type,
+        };
+
+        setImageFile(imageData);
+        setImagePreview(uri);
+      }
     }
   };
 
