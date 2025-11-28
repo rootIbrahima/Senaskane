@@ -76,17 +76,35 @@ export const AjouterMembreScreen = ({ navigation }) => {
       // Vérifier si un compte utilisateur a été créé
       if (response.data?.compteUtilisateur) {
         const compte = response.data.compteUtilisateur;
-        const message = `Membre ajouté avec succès !\n\n` +
-          `Un compte utilisateur a été créé :\n` +
-          `Login: ${compte.login}\n` +
-          `Mot de passe: ${compte.motDePasse}\n` +
-          `Code d'activation: ${compte.codeActivation}\n\n` +
-          `Communiquez ces identifiants au membre.`;
+
+        let message = `✅ Membre ajouté avec succès !\n\n`;
+        message += `📋 Compte utilisateur créé :\n`;
+        message += `━━━━━━━━━━━━━━━━━━━━\n`;
+        message += `Login: ${compte.login}\n`;
+        message += `Mot de passe: ${compte.motDePasse}\n`;
+        message += `Code: ${compte.codeActivation}\n`;
+        message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+        // Afficher le statut de l'envoi
+        if (compte.notificationEnvoyee) {
+          message += `📧 Invitation envoyée par ${compte.methodeEnvoi}\n\n`;
+        } else if (compte.avertissement) {
+          message += `⚠️ ${compte.avertissement}\n\n`;
+        }
+
+        message += `💡 Veuillez noter ces identifiants et les communiquer au membre.`;
 
         if (Platform.OS === 'web') {
           alert(message);
+          navigation.goBack();
         } else {
-          Alert.alert('Succès', message);
+          Alert.alert('Membre ajouté', message, [
+            {
+              text: 'OK',
+              onPress: () => navigation.goBack()
+            }
+          ]);
+          return; // Éviter le goBack() automatique
         }
       } else {
         if (Platform.OS === 'web') {
@@ -94,9 +112,8 @@ export const AjouterMembreScreen = ({ navigation }) => {
         } else {
           Alert.alert('Succès', 'Membre ajouté avec succès !');
         }
+        navigation.goBack();
       }
-
-      navigation.goBack();
     } catch (err) {
       console.error('Erreur lors de l\'ajout du membre:', err);
       const errorMsg = err.response?.data?.error || 'Erreur lors de l\'ajout du membre';

@@ -112,21 +112,37 @@ router.post('/ajouter', authenticateToken, requireAdmin, upload.single('photo'),
                 console.log(`   Mot de passe: ${invitationData.motDePasseTemp}`);
                 console.log(`   Code activation: ${invitationData.codeActivation}`);
 
-                // Envoyer l'invitation par email/SMS si possible
+                // Tenter d'envoyer l'invitation par email/SMS (ne bloque pas en cas d'échec)
+                let notificationStatus = { sent: false, method: null, error: null };
                 if (req.body.email) {
-                    try {
-                        await InvitationService.envoyerInvitation(invitationData.utilisateurId, 'email');
+                    const resultat = await InvitationService.envoyerInvitation(invitationData.utilisateurId, 'email');
+                    notificationStatus.sent = resultat.emailSent;
+                    notificationStatus.method = 'email';
+                    notificationStatus.error = resultat.error;
+                    if (resultat.emailSent) {
                         console.log(`📧 Invitation envoyée par email à ${req.body.email}`);
-                    } catch (emailError) {
-                        console.error('❌ Erreur envoi email:', emailError.message);
+                    } else {
+                        console.log(`⚠️ Email non envoyé: ${resultat.error}`);
                     }
                 } else if (req.body.telephone) {
-                    try {
-                        await InvitationService.envoyerInvitation(invitationData.utilisateurId, 'sms');
+                    const resultat = await InvitationService.envoyerInvitation(invitationData.utilisateurId, 'sms');
+                    notificationStatus.sent = resultat.smsSent || resultat.emailSent;
+                    notificationStatus.method = resultat.emailSent ? 'email (fallback)' : 'sms';
+                    notificationStatus.error = resultat.error;
+                    if (resultat.smsSent) {
                         console.log(`📱 Invitation envoyée par SMS à ${req.body.telephone}`);
-                    } catch (smsError) {
-                        console.error('❌ Erreur envoi SMS:', smsError.message);
+                    } else if (resultat.emailSent) {
+                        console.log(`📧 SMS échoué, invitation envoyée par email (fallback)`);
+                    } else {
+                        console.log(`⚠️ Notification non envoyée: ${resultat.error}`);
                     }
+                }
+
+                // Ajouter le statut de notification au compte utilisateur
+                compteUtilisateur.notificationEnvoyee = notificationStatus.sent;
+                compteUtilisateur.methodeEnvoi = notificationStatus.method;
+                if (notificationStatus.error) {
+                    compteUtilisateur.avertissement = `L'invitation n'a pas pu être envoyée (${notificationStatus.error}). Veuillez communiquer ces identifiants au membre.`;
                 }
 
             } catch (invitationError) {

@@ -33,25 +33,44 @@ router.post('/creer', authenticateToken, requireAdmin, [
         }
 
         const invitation = await InvitationService.creerInvitation(
-            adminId, 
-            familleId, 
+            adminId,
+            familleId,
             { nom, prenom, email, telephone }
         );
 
-        // Envoyer l'invitation
+        // Tenter d'envoyer l'invitation (sans bloquer si ça échoue)
         const moyenCommunication = email ? 'email' : 'sms';
-        await InvitationService.envoyerInvitation(
-            invitation.utilisateurId, 
+        const resultatEnvoi = await InvitationService.envoyerInvitation(
+            invitation.utilisateurId,
             moyenCommunication
         );
 
-        res.status(201).json({
-            message: 'Invitation créée et envoyée avec succès',
+        // Toujours retourner succès avec les credentials, même si l'envoi a échoué
+        const response = {
+            message: resultatEnvoi.emailSent || resultatEnvoi.smsSent
+                ? `Invitation créée et envoyée avec succès par ${resultatEnvoi.moyen}`
+                : 'Invitation créée avec succès',
             data: {
                 login: invitation.login,
-                codeActivation: invitation.codeActivation
+                codeActivation: invitation.codeActivation,
+                nom: resultatEnvoi.credentials.nom,
+                prenom: resultatEnvoi.credentials.prenom,
+                email: resultatEnvoi.credentials.email,
+                telephone: resultatEnvoi.credentials.telephone
+            },
+            notification: {
+                emailSent: resultatEnvoi.emailSent,
+                smsSent: resultatEnvoi.smsSent,
+                error: resultatEnvoi.error
             }
-        });
+        };
+
+        // Si l'envoi a échoué, ajouter un avertissement
+        if (resultatEnvoi.error) {
+            response.warning = `L'invitation n'a pas pu être envoyée (${resultatEnvoi.error}). Veuillez communiquer les identifiants manuellement au membre.`;
+        }
+
+        res.status(201).json(response);
 
     } catch (error) {
         console.error('Erreur création invitation:', error);
