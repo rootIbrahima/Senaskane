@@ -1,7 +1,7 @@
 export default {
   expo: {
     name: "Baïla Généa",
-    slug: "bailagenea",
+    slug: "senaskane",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
