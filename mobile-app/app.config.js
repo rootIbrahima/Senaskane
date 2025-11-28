@@ -1,7 +1,7 @@
 export default {
   expo: {
-    name: "Senaskane",
-    slug: "senaskane",
+    name: "Baïla Généa",
+    slug: "bailagenea",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
@@ -16,11 +16,11 @@ export default {
     ],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.senaskane.app"
+      bundleIdentifier: "com.bailagenea.app"
     },
     android: {
-      package: "com.senaskane.app",
-      versionCode: 1,
+      package: "com.bailagenea.app",
+      versionCode: 2,
       icon: "./assets/icon.png",
       permissions: [
         "CAMERA",

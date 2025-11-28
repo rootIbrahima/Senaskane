@@ -87,7 +87,7 @@ export const RegisterScreen = ({ navigation }) => {
       >
         <View style={styles.header}>
           <Text style={styles.title}>Créer un compte</Text>
-          <Text style={styles.subtitle}>Rejoignez Senaskane</Text>
+          <Text style={styles.subtitle}>Rejoignez Baïla Généa</Text>
         </View>
 
         <View style={styles.form}>

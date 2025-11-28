@@ -87,13 +87,13 @@ class InvitationService {
             const message = `
 Bonjour ${user.prenom} ${user.nom},
 
-Bienvenue dans l'application Senaskane pour la famille ${user.famille_nom}!
+Bienvenue dans l'application Baïla Généa pour la famille ${user.famille_nom}!
 
 Vos identifiants:
 Login: ${user.login}
 Code d'activation: ${user.code_activation}
 
-Téléchargez l'application Senaskane et utilisez ce code pour activer votre compte.
+Téléchargez l'application Baïla Généa et utilisez ce code pour activer votre compte.
             `.trim();
 
             // Préparer le résultat avec les identifiants (toujours retournés)
@@ -115,7 +115,7 @@ Téléchargez l'application Senaskane et utilisez ce code pour activer votre com
 
             if (moyenCommunication === 'email' && user.email) {
                 try {
-                    await this.envoyerEmail(user.email, 'Invitation Senaskane', message);
+                    await this.envoyerEmail(user.email, 'Invitation Baïla Généa', message);
                     resultat.success = true;
                     resultat.emailSent = true;
                     console.log(`✅ Email envoyé avec succès à ${user.email}`);
@@ -137,7 +137,7 @@ Téléchargez l'application Senaskane et utilisez ce code pour activer votre com
                     if (user.email) {
                         console.log('🔄 Tentative d\'envoi par email en fallback...');
                         try {
-                            await this.envoyerEmail(user.email, 'Invitation Senaskane', message);
+                            await this.envoyerEmail(user.email, 'Invitation Baïla Généa', message);
                             resultat.moyen = 'email';
                             resultat.success = true;
                             resultat.emailSent = true;
@@ -189,7 +189,7 @@ Téléchargez l'application Senaskane et utilisez ce code pour activer votre com
         const result = await sms.send({
             to: [telephone],
             message: message,
-            from: 'Senaskane'
+            from: 'Baïla Généa'
         });
         
         return result;
@@ -221,14 +221,14 @@ Téléchargez l'application Senaskane et utilisez ce code pour activer votre com
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1>🌳 Senaskane</h1>
+                        <h1>🌳 Baïla Généa</h1>
                     </div>
                     <div class="content">
                         ${message.split('\n').map(line => `<p>${line}</p>`).join('')}
                     </div>
                     <div class="footer">
                         <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
-                        <p>&copy; 2025 Senaskane - Plateforme de gestion familiale</p>
+                        <p>&copy; 2025 Baïla Généa - Plateforme de gestion familiale</p>
                     </div>
                 </div>
             </body>
@@ -251,7 +251,7 @@ Téléchargez l'application Senaskane et utilisez ce code pour activer votre com
             const messageHtml = this.creerTemplateEmail(message);
 
             const data = await resend.emails.send({
-                from: process.env.EMAIL_FROM || 'Senaskane <onboarding@resend.dev>',
+                from: process.env.EMAIL_FROM || 'Baïla Généa <onboarding@resend.dev>',
                 to: [email],
                 subject: sujet,
                 html: messageHtml,
@@ -315,7 +315,7 @@ Téléchargez l'application Senaskane et utilisez ce code pour activer votre com
 
             // Envoyer l'email
             const info = await transporter.sendMail({
-                from: process.env.EMAIL_FROM || '"Senaskane" <noreply@senaskane.com>',
+                from: process.env.EMAIL_FROM || '"Baïla Généa" <noreply@senaskane.com>',
                 to: email,
                 subject: sujet,
                 text: message,

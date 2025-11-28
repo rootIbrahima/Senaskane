@@ -61,7 +61,7 @@ export const AboutScreen = () => {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.title}>Senaskane</Text>
+          <Text style={styles.title}>Baïla Généa</Text>
           <Text style={styles.version}>Version 1.0.0</Text>
           <Text style={styles.tagline}>
             Votre arbre généalogique familial
@@ -70,7 +70,7 @@ export const AboutScreen = () => {
 
         <Card style={styles.descriptionCard}>
           <Text style={styles.descriptionText}>
-            Senaskane est une application de gestion d'arbre généalogique qui vous permet de
+            Baïla Généa est une application de gestion d'arbre généalogique qui vous permet de
             conserver et partager l'histoire de votre famille. Créez votre arbre, ajoutez des
             membres, organisez des cérémonies et préservez vos souvenirs familiaux.
           </Text>
@@ -93,23 +93,23 @@ export const AboutScreen = () => {
           <Text style={styles.contactTitle}>Contact & Support</Text>
           <TouchableOpacity
             style={styles.contactRow}
-            onPress={() => handleOpenLink('mailto:support@senaskane.com')}
+            onPress={() => handleOpenLink('mailto:support@bailagenea.com')}
           >
             <Ionicons name="mail" size={20} color={COLORS.primary} />
-            <Text style={styles.contactText}>support@senaskane.com</Text>
+            <Text style={styles.contactText}>support@bailagenea.com</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.contactRow}
-            onPress={() => handleOpenLink('https://senaskane.com')}
+            onPress={() => handleOpenLink('https://bailagenea.com')}
           >
             <Ionicons name="globe" size={20} color={COLORS.primary} />
-            <Text style={styles.contactText}>www.senaskane.com</Text>
+            <Text style={styles.contactText}>www.bailagenea.com</Text>
           </TouchableOpacity>
         </Card>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            © 2025 Senaskane. Tous droits réservés.
+            © 2025 Baïla Généa. Tous droits réservés.
           </Text>
           <Text style={styles.footerSubtext}>
             Fait avec ❤️ pour préserver vos histoires familiales

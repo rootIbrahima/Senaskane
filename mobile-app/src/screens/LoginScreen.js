@@ -57,7 +57,7 @@ export const LoginScreen = ({ navigation }) => {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.title}>Senaskane</Text>
+          <Text style={styles.title}>Baïla Généa</Text>
           <Text style={styles.subtitle}>Votre arbre généalogique familial</Text>
         </View>
 
