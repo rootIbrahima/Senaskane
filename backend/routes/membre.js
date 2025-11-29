@@ -104,7 +104,10 @@ router.post('/ajouter', authenticateToken, requireAdmin, upload.single('photo'),
                 compteUtilisateur = {
                     login: invitationData.login,
                     motDePasse: invitationData.motDePasseTemp,
-                    codeActivation: invitationData.codeActivation
+                    codeActivation: invitationData.codeActivation,
+                    notificationEnvoyee: false,
+                    methodeEnvoi: null,
+                    avertissement: 'Veuillez communiquer ces identifiants au membre.'
                 };
 
                 console.log(`✅ Compte utilisateur créé pour ${req.body.prenom} ${req.body.nom}`);
@@ -112,38 +115,8 @@ router.post('/ajouter', authenticateToken, requireAdmin, upload.single('photo'),
                 console.log(`   Mot de passe: ${invitationData.motDePasseTemp}`);
                 console.log(`   Code activation: ${invitationData.codeActivation}`);
 
-                // Tenter d'envoyer l'invitation par email/SMS (ne bloque pas en cas d'échec)
-                let notificationStatus = { sent: false, method: null, error: null };
-                if (req.body.email) {
-                    const resultat = await InvitationService.envoyerInvitation(invitationData.utilisateurId, 'email');
-                    notificationStatus.sent = resultat.emailSent;
-                    notificationStatus.method = 'email';
-                    notificationStatus.error = resultat.error;
-                    if (resultat.emailSent) {
-                        console.log(`📧 Invitation envoyée par email à ${req.body.email}`);
-                    } else {
-                        console.log(`⚠️ Email non envoyé: ${resultat.error}`);
-                    }
-                } else if (req.body.telephone) {
-                    const resultat = await InvitationService.envoyerInvitation(invitationData.utilisateurId, 'sms');
-                    notificationStatus.sent = resultat.smsSent || resultat.emailSent;
-                    notificationStatus.method = resultat.emailSent ? 'email (fallback)' : 'sms';
-                    notificationStatus.error = resultat.error;
-                    if (resultat.smsSent) {
-                        console.log(`📱 Invitation envoyée par SMS à ${req.body.telephone}`);
-                    } else if (resultat.emailSent) {
-                        console.log(`📧 SMS échoué, invitation envoyée par email (fallback)`);
-                    } else {
-                        console.log(`⚠️ Notification non envoyée: ${resultat.error}`);
-                    }
-                }
-
-                // Ajouter le statut de notification au compte utilisateur
-                compteUtilisateur.notificationEnvoyee = notificationStatus.sent;
-                compteUtilisateur.methodeEnvoi = notificationStatus.method;
-                if (notificationStatus.error) {
-                    compteUtilisateur.avertissement = `L'invitation n'a pas pu être envoyée (${notificationStatus.error}). Veuillez communiquer ces identifiants au membre.`;
-                }
+                // TODO: Réactiver l'envoi d'email/SMS plus tard
+                // Pour l'instant, on affiche juste les credentials dans le popup
 
             } catch (invitationError) {
                 console.error('⚠️ Erreur création compte utilisateur:', invitationError.message);
