@@ -211,6 +211,17 @@ export const MembreDetailScreen = ({ route, navigation }) => {
           </View>
         )}
 
+        <View style={styles.section}>
+          <TouchableOpacity
+            style={styles.lienParenteButton}
+            onPress={() => navigation.navigate('LienParente', { membre1: membre })}
+          >
+            <Ionicons name="git-network-outline" size={24} color={COLORS.primary} />
+            <Text style={styles.lienParenteText}>Voir lien de parenté avec un autre membre</Text>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+          </TouchableOpacity>
+        </View>
+
         {user?.role === 'admin' && (
           <View style={styles.actions}>
             <TouchableOpacity
@@ -382,5 +393,23 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: FONT_SIZES.md,
     fontWeight: '700',
+  },
+  lienParenteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.sm,
+    borderRadius: 12,
+    backgroundColor: COLORS.primaryLight,
+    borderWidth: 2,
+    borderColor: COLORS.primary + '30',
+  },
+  lienParenteText: {
+    flex: 1,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.primary,
+    fontWeight: '600',
+    marginHorizontal: SPACING.sm,
   },
 });

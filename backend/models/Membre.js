@@ -3,35 +3,72 @@ const db = require('../config/database');
 
 class Membre {
     /**
-     * Générer un numéro d'identification unique pour un membre
-     * Format: FAM{familleId}-MEM{compteur}
-     * Exemple: FAM2-MEM001, FAM2-MEM002, etc.
+     * Générer un numéro d'identification hiérarchique pour un membre
+     * Format hiérarchique:
+     * - Racines (sans parents): 001, 002, 003, ...
+     * - Enfants: {numeroParent}.001, {numeroParent}.002, ...
+     * - Exemple: Parent 002 → Enfants 002.001, 002.002, etc.
+     *
+     * @param {number} familleId - ID de la famille
+     * @param {number|null} pereId - ID du père (prioritaire)
+     * @param {number|null} mereId - ID de la mère (si pas de père)
+     * @returns {string} Numéro d'identification hiérarchique
      */
-    static async genererNumeroIdentification(familleId) {
+    static async genererNumeroIdentification(familleId, pereId = null, mereId = null) {
         try {
-            // Compter le nombre de membres existants dans la famille
-            const [rows] = await db.execute(
-                'SELECT COUNT(*) as total FROM membre WHERE famille_id = ?',
-                [familleId]
+            // Déterminer le parent de référence (père prioritaire, sinon mère)
+            const parentId = pereId || mereId;
+
+            // CAS 1: Membre racine (pas de parent)
+            if (!parentId) {
+                // Compter les racines existantes (membres sans parents)
+                const [racines] = await db.execute(`
+                    SELECT COUNT(DISTINCT m.id) as total
+                    FROM membre m
+                    LEFT JOIN lien_parental lp ON m.id = lp.enfant_id
+                    WHERE m.famille_id = ? AND lp.id IS NULL
+                `, [familleId]);
+
+                const compteur = racines[0].total + 1;
+                return String(compteur).padStart(3, '0'); // 001, 002, 003, ...
+            }
+
+            // CAS 2: Enfant (a un parent)
+            // Récupérer le numéro du parent
+            const [parent] = await db.execute(
+                'SELECT numero_identification FROM membre WHERE id = ?',
+                [parentId]
             );
-            
-            const total = rows[0].total;
-            const compteur = total + 1;
-            
-            // Format: FAM{familleId}-MEM{compteur avec padding}
-            const numeroIdentification = `FAM${familleId}-MEM${String(compteur).padStart(3, '0')}`;
-            
-            // Vérifier l'unicité (au cas où)
+
+            if (!parent || parent.length === 0) {
+                throw new Error('Parent introuvable');
+            }
+
+            const numeroParent = parent[0].numero_identification;
+
+            // Compter les enfants existants de ce parent
+            const [enfants] = await db.execute(`
+                SELECT COUNT(*) as total
+                FROM lien_parental
+                WHERE parent_id = ?
+            `, [parentId]);
+
+            const compteurEnfant = enfants[0].total + 1;
+
+            // Format: {numeroParent}.{compteur}
+            const numeroIdentification = `${numeroParent}.${String(compteurEnfant).padStart(3, '0')}`;
+
+            // Vérifier l'unicité
             const [existing] = await db.execute(
                 'SELECT id FROM membre WHERE numero_identification = ?',
                 [numeroIdentification]
             );
-            
+
             if (existing.length > 0) {
-                // En cas de collision (rare), utiliser un timestamp
-                return `FAM${familleId}-MEM${Date.now()}`;
+                // En cas de collision rare, ajouter un suffixe temporel
+                return `${numeroParent}.${String(compteurEnfant).padStart(3, '0')}_${Date.now()}`;
             }
-            
+
             return numeroIdentification;
         } catch (error) {
             throw new Error('Erreur lors de la génération du numéro d\'identification: ' + error.message);
@@ -42,11 +79,12 @@ class Membre {
         try {
             const {
                 familleId, nom, prenom, sexe, dateNaissance, lieuNaissance,
-                profession, lieuResidence, nomConjoint, photo, informationsSupplementaires
+                profession, lieuResidence, nomConjoint, photo, informationsSupplementaires,
+                pereId, mereId
             } = donnesMembre;
 
-            // Générer le numéro d'identification unique
-            const numeroIdentification = await this.genererNumeroIdentification(familleId);
+            // Générer le numéro d'identification hiérarchique
+            const numeroIdentification = await this.genererNumeroIdentification(familleId, pereId, mereId);
 
             const [result] = await db.execute(
                 `INSERT INTO membre 

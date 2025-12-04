@@ -62,7 +62,9 @@ router.post('/ajouter', authenticateToken, requireAdmin, upload.single('photo'),
             lieuResidence: req.body.lieuResidence || null,
             nomConjoint: req.body.nomConjoint || null,
             photo: req.file ? req.file.filename : null,
-            informationsSupplementaires: req.body.informationsSupplementaires || null
+            informationsSupplementaires: req.body.informationsSupplementaires || null,
+            pereId: req.body.pereId ? parseInt(req.body.pereId) : null,
+            mereId: req.body.mereId ? parseInt(req.body.mereId) : null
         };
 
         const membre = await Membre.ajouter(donnesMembre);

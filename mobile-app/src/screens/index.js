@@ -19,3 +19,5 @@ export { CeremonieDetailScreen } from './CeremonieDetailScreen';
 export { GestionFinanciereScreen } from './GestionFinanciereScreen';
 export { AjouterObjetMuseeScreen } from './AjouterObjetMuseeScreen';
 export { ObjetMuseeDetailScreen } from './ObjetMuseeDetailScreen';
+export { RechercheScreen } from './RechercheScreen';
+export { LienParenteScreen } from './LienParenteScreen';

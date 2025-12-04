@@ -76,4 +76,25 @@ export const membreApi = {
     const response = await api.put(`/membre/mariage/${id}`, data);
     return response.data;
   },
+
+  // Rechercher par profession
+  rechercherParProfession: async (profession) => {
+    const response = await api.get(`/membre/recherche/metier/${encodeURIComponent(profession)}`);
+    return response.data;
+  },
+
+  // Rechercher par lieu de résidence
+  rechercherParLieu: async (lieu) => {
+    const response = await api.get(`/membre/recherche/lieu/${encodeURIComponent(lieu)}`);
+    return response.data;
+  },
+
+  // Trouver le lien de parenté entre 2 membres
+  trouverLienParente: async (membreId1, membreId2) => {
+    const response = await api.post('/membre/recherche/lien-parente', {
+      membreId1,
+      membreId2
+    });
+    return response.data;
+  },
 };
