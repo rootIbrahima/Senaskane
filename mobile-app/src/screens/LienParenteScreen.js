@@ -29,6 +29,13 @@ export const LienParenteScreen = ({ route, navigation }) => {
     loadMembres();
   }, []);
 
+  // Mettre à jour membre1 si les params changent
+  useEffect(() => {
+    if (route.params?.membre1) {
+      setMembre1({ ...route.params.membre1 });
+    }
+  }, [route.params?.membre1?.id]);
+
   const loadMembres = async () => {
     try {
       const data = await membreApi.getMembres();
@@ -72,10 +79,13 @@ export const LienParenteScreen = ({ route, navigation }) => {
   };
 
   const selectMembre = (membre) => {
+    // Créer une nouvelle instance pour forcer React à détecter le changement
+    const newMembre = { ...membre };
+
     if (selectingMembre === 1) {
-      setMembre1(membre);
+      setMembre1(newMembre);
     } else {
-      setMembre2(membre);
+      setMembre2(newMembre);
     }
     setShowModal(false);
     setResult(null);
