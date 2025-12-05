@@ -24,6 +24,7 @@ export const LienParenteScreen = ({ route, navigation }) => {
   const [showModal, setShowModal] = useState(false);
   const [selectingMembre, setSelectingMembre] = useState(null); // 1 ou 2
   const [searchQuery, setSearchQuery] = useState('');
+  const [renderKey, setRenderKey] = useState(0); // Compteur pour forcer le re-render
 
   useEffect(() => {
     loadMembres();
@@ -89,6 +90,9 @@ export const LienParenteScreen = ({ route, navigation }) => {
     }
     setShowModal(false);
     setResult(null);
+
+    // Forcer le re-render complet
+    setRenderKey(prev => prev + 1);
   };
 
   const filteredMembres = membres.filter((m) => {
@@ -96,7 +100,8 @@ export const LienParenteScreen = ({ route, navigation }) => {
     return fullName.includes(searchQuery.toLowerCase());
   });
 
-  const renderMembreCard = (membre, title, onPress) => (
+  // Composant MembreCard pour forcer le re-render
+  const MembreCard = ({ membre, title, onPress }) => (
     <Card style={styles.membreCard}>
       <Text style={styles.cardTitle}>{title}</Text>
       {membre ? (
@@ -174,8 +179,18 @@ export const LienParenteScreen = ({ route, navigation }) => {
         </Text>
       </View>
 
-      {renderMembreCard(membre1, 'Premier membre', () => openMembreSelector(1))}
-      {renderMembreCard(membre2, 'Deuxième membre', () => openMembreSelector(2))}
+      <MembreCard
+        key={`membre1-${membre1?.id || 'empty'}-${renderKey}`}
+        membre={membre1}
+        title="Premier membre"
+        onPress={() => openMembreSelector(1)}
+      />
+      <MembreCard
+        key={`membre2-${membre2?.id || 'empty'}-${renderKey}`}
+        membre={membre2}
+        title="Deuxième membre"
+        onPress={() => openMembreSelector(2)}
+      />
 
       <Button
         title="Trouver le lien de parenté"
