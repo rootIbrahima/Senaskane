@@ -19,7 +19,7 @@ export const RechercheScreen = ({ navigation }) => {
       let data;
       switch (activeTab) {
         case 'nom':
-          data = await rechercheApi.searchGlobal(query);
+          data = await membreApi.rechercherParNom(query);
           break;
         case 'profession':
           data = await membreApi.rechercherParProfession(query);

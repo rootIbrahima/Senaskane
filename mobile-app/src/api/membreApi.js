@@ -77,6 +77,12 @@ export const membreApi = {
     return response.data;
   },
 
+  // Rechercher par nom/prénom
+  rechercherParNom: async (nom) => {
+    const response = await api.get(`/membre/recherche/nom/${encodeURIComponent(nom)}`);
+    return response.data;
+  },
+
   // Rechercher par profession
   rechercherParProfession: async (profession) => {
     const response = await api.get(`/membre/recherche/metier/${encodeURIComponent(profession)}`);
