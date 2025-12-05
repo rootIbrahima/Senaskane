@@ -5,9 +5,9 @@ class Membre {
     /**
      * Générer un numéro d'identification hiérarchique pour un membre
      * Format hiérarchique:
-     * - Racines (sans parents): 001, 002, 003, ...
+     * - Racines (sans parents): FAM{familleId}-001, FAM{familleId}-002, FAM{familleId}-003, ...
      * - Enfants: {numeroParent}.001, {numeroParent}.002, ...
-     * - Exemple: Parent 002 → Enfants 002.001, 002.002, etc.
+     * - Exemple: Parent FAM2-002 → Enfants FAM2-002.001, FAM2-002.002, etc.
      *
      * @param {number} familleId - ID de la famille
      * @param {number|null} pereId - ID du père (prioritaire)
@@ -18,6 +18,9 @@ class Membre {
         try {
             // Déterminer le parent de référence (père prioritaire, sinon mère)
             const parentId = pereId || mereId;
+
+            // Préfixe de famille
+            const famillePrefix = `FAM${familleId}-`;
 
             // CAS 1: Membre racine (pas de parent)
             if (!parentId) {
@@ -30,7 +33,7 @@ class Membre {
                 `, [familleId]);
 
                 const compteur = racines[0].total + 1;
-                return String(compteur).padStart(3, '0'); // 001, 002, 003, ...
+                return `${famillePrefix}${String(compteur).padStart(3, '0')}`; // FAM2-001, FAM2-002, FAM2-003, ...
             }
 
             // CAS 2: Enfant (a un parent)

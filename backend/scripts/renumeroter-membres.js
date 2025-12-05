@@ -115,10 +115,13 @@ async function renumeroterFamille(connection, famille) {
         return;
     }
 
+    // Préfixe de famille
+    const famillePrefix = `FAM${famille.id}-`;
+
     // 2. Renuméroter les racines
     let compteurRacine = 1;
     for (const racine of racines) {
-        const nouveauNumero = String(compteurRacine).padStart(3, '0');
+        const nouveauNumero = `${famillePrefix}${String(compteurRacine).padStart(3, '0')}`;
 
         console.log(`Racine ${compteurRacine}: ${racine.prenom} ${racine.nom}`);
         console.log(`  ${racine.numero_identification} → ${nouveauNumero}`);
@@ -158,7 +161,20 @@ async function main() {
         await connection.beginTransaction();
         console.log('✓ Transaction démarrée\n');
 
-        // Récupérer toutes les familles
+        // ÉTAPE 1: Renommer temporairement tous les membres pour éviter les conflits
+        console.log('ÉTAPE 1: Renommage temporaire de tous les membres...\n');
+        const [allMembres] = await connection.execute('SELECT id, numero_identification FROM membre');
+        console.log(`Nombre total de membres à renommer: ${allMembres.length}`);
+
+        for (const membre of allMembres) {
+            const tempNumero = `TMP${membre.id}`;
+            await updateNumero(connection, membre.id, tempNumero);
+            console.log(`  Membre ${membre.id}: ${membre.numero_identification} → ${tempNumero}`);
+        }
+        console.log('✓ Tous les membres ont été renommés temporairement\n');
+
+        // ÉTAPE 2: Récupérer toutes les familles et renuméroter
+        console.log('ÉTAPE 2: Renumérotation hiérarchique...\n');
         const familles = await getFamilles(connection);
         console.log(`Nombre de familles trouvées: ${familles.length}\n`);
 
