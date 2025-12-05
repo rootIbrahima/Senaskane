@@ -238,9 +238,26 @@ class Membre {
 
     static async trouverLienParente(familleId, membreId1, membreId2) {
         try {
+            // Récupérer les informations de sexe des deux membres
+            const [membre1Info] = await db.execute(
+                'SELECT sexe FROM membre WHERE id = ?',
+                [membreId1]
+            );
+            const [membre2Info] = await db.execute(
+                'SELECT sexe FROM membre WHERE id = ?',
+                [membreId2]
+            );
+
+            if (!membre1Info.length || !membre2Info.length) {
+                throw new Error('Un ou plusieurs membres non trouvés');
+            }
+
+            const sexeMembre1 = membre1Info[0].sexe;
+            const sexeMembre2 = membre2Info[0].sexe;
+
             // Algorithme pour trouver le chemin entre deux membres
             // Implémentation d'un parcours en largeur (BFS) pour trouver l'ancêtre commun
-            
+
             const query = `
                 WITH RECURSIVE arbre_ascendant1 AS (
                     SELECT id, numero_identification, nom, prenom, 0 as niveau
@@ -270,11 +287,11 @@ class Membre {
             `;
 
             const [result] = await db.execute(query, [membreId1, familleId, membreId2, familleId]);
-            
+
             if (result.length > 0) {
                 const ancetreCommun = result[0];
                 const degre = ancetreCommun.niveau + ancetreCommun.niveau2;
-                
+
                 return {
                     ancetreCommun: {
                         id: ancetreCommun.id,
@@ -283,10 +300,10 @@ class Membre {
                         prenom: ancetreCommun.prenom
                     },
                     degre: degre,
-                    description: this.decrireLienParente(ancetreCommun.niveau, ancetreCommun.niveau2)
+                    description: this.decrireLienParente(ancetreCommun.niveau, ancetreCommun.niveau2, sexeMembre1, sexeMembre2)
                 };
             }
-            
+
             return null;
         } catch (error) {
             throw new Error('Erreur lors de la recherche de lien de parenté: ' + error.message);
@@ -295,44 +312,66 @@ class Membre {
 
     /**
      * Décrire le lien de parenté en langage naturel
+     * @param niveau1 - distance de membre1 à l'ancêtre commun
+     * @param niveau2 - distance de membre2 à l'ancêtre commun
+     * @param sexeMembre1 - sexe du membre1 ('M' ou 'F')
+     * @param sexeMembre2 - sexe du membre2 ('M' ou 'F')
      */
-    static decrireLienParente(niveau1, niveau2) {
+    static decrireLienParente(niveau1, niveau2, sexeMembre1, sexeMembre2) {
         if (niveau1 === 0 && niveau2 === 0) {
             return "Même personne";
         }
-        
+
+        // Membre2 est le parent de Membre1
         if (niveau1 === 1 && niveau2 === 0) {
-            return "Parent";
+            return sexeMembre2 === 'M' ? "Père" : "Mère";
         }
-        
+
+        // Membre2 est l'enfant de Membre1
         if (niveau1 === 0 && niveau2 === 1) {
-            return "Enfant";
+            return sexeMembre2 === 'M' ? "Fils" : "Fille";
         }
-        
+
+        // Membre2 est le grand-parent de Membre1
         if (niveau1 === 2 && niveau2 === 0) {
-            return "Grand-parent";
+            return sexeMembre2 === 'M' ? "Grand-père" : "Grand-mère";
         }
-        
+
+        // Membre2 est le petit-enfant de Membre1
         if (niveau1 === 0 && niveau2 === 2) {
-            return "Petit-enfant";
+            return sexeMembre2 === 'M' ? "Petit-fils" : "Petite-fille";
         }
-        
+
+        // Frère ou Sœur (même génération, même parents)
         if (niveau1 === 1 && niveau2 === 1) {
-            return "Frère/Sœur";
+            return sexeMembre2 === 'M' ? "Frère" : "Sœur";
         }
-        
+
+        // Membre2 est l'oncle/tante de Membre1
         if (niveau1 === 2 && niveau2 === 1) {
-            return "Oncle/Tante";
+            return sexeMembre2 === 'M' ? "Oncle" : "Tante";
         }
-        
+
+        // Membre2 est le neveu/nièce de Membre1
         if (niveau1 === 1 && niveau2 === 2) {
-            return "Neveu/Nièce";
+            return sexeMembre2 === 'M' ? "Neveu" : "Nièce";
         }
-        
+
+        // Cousins (même niveau, 2+ générations)
         if (niveau1 === 2 && niveau2 === 2) {
-            return "Cousin(e)";
+            return sexeMembre2 === 'M' ? "Cousin" : "Cousine";
         }
-        
+
+        // Arrière-grand-parent
+        if (niveau1 === 3 && niveau2 === 0) {
+            return sexeMembre2 === 'M' ? "Arrière-grand-père" : "Arrière-grand-mère";
+        }
+
+        // Arrière-petit-enfant
+        if (niveau1 === 0 && niveau2 === 3) {
+            return sexeMembre2 === 'M' ? "Arrière-petit-fils" : "Arrière-petite-fille";
+        }
+
         return `Lien de parenté au ${niveau1 + niveau2}ème degré`;
     }
 
