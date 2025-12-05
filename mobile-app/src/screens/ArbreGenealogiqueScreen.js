@@ -13,6 +13,8 @@ import {
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { COLORS, SPACING, FONT_SIZES } from '../utils/config';
 import { membreApi } from '../api/membreApi';
 import { Card, Loading, FamilyTreeView, Input } from '../components';
@@ -288,6 +290,151 @@ export const ArbreGenealogiqueScreen = ({ navigation }) => {
           Alert.alert('Erreur', error.response?.data?.error || 'Erreur lors de la suppression');
         }
       });
+    }
+  };
+
+  // Générer et exporter le PDF de l'arbre généalogique
+  const exportToPDF = async () => {
+    try {
+      // Organiser les membres par génération
+      const membreMap = {};
+      arbre.membres.forEach(m => {
+        membreMap[m.id] = { ...m, children: [], parents: [] };
+      });
+
+      arbre.liens.forEach(lien => {
+        if (membreMap[lien.enfant_id] && membreMap[lien.parent_id]) {
+          membreMap[lien.enfant_id].parents.push(lien.parent_id);
+          membreMap[lien.parent_id].children.push(lien.enfant_id);
+        }
+      });
+
+      // Trouver les racines
+      const roots = arbre.membres.filter(m => membreMap[m.id].parents.length === 0);
+
+      // Fonction pour construire l'arbre HTML par génération
+      const buildTreeHTML = (membreId, visited = new Set(), level = 0) => {
+        if (visited.has(membreId)) return '';
+        visited.add(membreId);
+
+        const membre = membreMap[membreId];
+        if (!membre) return '';
+
+        const indent = '&nbsp;&nbsp;&nbsp;&nbsp;'.repeat(level);
+        const sexeIcon = membre.sexe === 'M' ? '♂' : '♀';
+        const sexeColor = membre.sexe === 'M' ? '#2196F3' : '#E91E63';
+
+        let html = `
+          <div style="margin-left: ${level * 20}px; margin-bottom: 10px; page-break-inside: avoid;">
+            <div style="padding: 10px; border: 2px solid ${sexeColor}; border-radius: 8px; background-color: #f9f9f9;">
+              <div style="font-weight: bold; color: ${sexeColor}; font-size: 16px;">
+                ${sexeIcon} ${membre.prenom} ${membre.nom}
+              </div>
+              <div style="font-size: 12px; color: #666; margin-top: 4px;">
+                N°: ${membre.numero_identification || 'N/A'}
+              </div>
+              ${membre.dateNaissance ? `<div style="font-size: 11px; color: #888;">Né(e): ${membre.dateNaissance}</div>` : ''}
+              ${membre.profession ? `<div style="font-size: 11px; color: #888;">Profession: ${membre.profession}</div>` : ''}
+            </div>
+          </div>
+        `;
+
+        // Ajouter les enfants
+        if (membre.children && membre.children.length > 0) {
+          membre.children.forEach(childId => {
+            html += buildTreeHTML(childId, visited, level + 1);
+          });
+        }
+
+        return html;
+      };
+
+      // Construire le HTML complet
+      let treeHTML = '';
+      roots.forEach(root => {
+        treeHTML += buildTreeHTML(root.id);
+      });
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+              body {
+                font-family: 'Helvetica', 'Arial', sans-serif;
+                padding: 20px;
+                background-color: white;
+              }
+              h1 {
+                color: #1e3a8a;
+                text-align: center;
+                margin-bottom: 30px;
+                border-bottom: 3px solid #1e3a8a;
+                padding-bottom: 10px;
+              }
+              .info {
+                text-align: center;
+                color: #666;
+                margin-bottom: 20px;
+                font-size: 12px;
+              }
+              .generation-title {
+                font-size: 18px;
+                font-weight: bold;
+                color: #1e3a8a;
+                margin-top: 30px;
+                margin-bottom: 15px;
+                border-left: 4px solid #1e3a8a;
+                padding-left: 10px;
+              }
+            </style>
+          </head>
+          <body>
+            <h1>🌳 Arbre Généalogique - Baïla Généa</h1>
+            <div class="info">
+              Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}
+            </div>
+            <div class="info">
+              <strong>Total: ${arbre.membres.length} membres</strong> |
+              <strong>${arbre.liens.length} liens parentaux</strong>
+            </div>
+            <div style="margin-top: 30px;">
+              ${treeHTML}
+            </div>
+          </body>
+        </html>
+      `;
+
+      // Générer le PDF
+      const { uri } = await Print.printToFileAsync({ html });
+
+      // Partager le PDF
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Arbre Généalogique',
+          UTI: 'com.adobe.pdf'
+        });
+
+        if (Platform.OS !== 'web') {
+          Alert.alert('Succès', 'L\'arbre généalogique a été exporté en PDF');
+        }
+      } else {
+        if (Platform.OS === 'web') {
+          alert('Le partage n\'est pas disponible sur cette plateforme');
+        } else {
+          Alert.alert('Erreur', 'Le partage n\'est pas disponible sur cet appareil');
+        }
+      }
+    } catch (error) {
+      console.error('Erreur export PDF:', error);
+      if (Platform.OS === 'web') {
+        alert('Erreur lors de l\'export du PDF: ' + error.message);
+      } else {
+        Alert.alert('Erreur', 'Impossible d\'exporter le PDF');
+      }
     }
   };
 
@@ -577,13 +724,24 @@ export const ArbreGenealogiqueScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Arbre Généalogique</Text>
           <Text style={styles.headerSubtitle}>
             {arbre.membres.length} membres • {arbre.liens.length} liens • {arbre.mariages?.length || 0} mariages
           </Text>
         </View>
 
+        <TouchableOpacity
+          style={styles.pdfButton}
+          onPress={exportToPDF}
+          disabled={arbre.membres.length === 0}
+        >
+          <Ionicons name="download-outline" size={20} color={COLORS.white} />
+          <Text style={styles.pdfButtonText}>PDF</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.viewToggleRow}>
         <View style={styles.viewToggle}>
           <TouchableOpacity
             style={[styles.toggleButton, viewMode === 'tree' && styles.toggleButtonActive]}
@@ -868,6 +1026,32 @@ const styles = StyleSheet.create({
   },
   toggleButtonTextActive: {
     color: COLORS.white,
+  },
+  pdfButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.success,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: 8,
+    gap: 6,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  pdfButtonText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '600',
+  },
+  viewToggleRow: {
+    backgroundColor: COLORS.white,
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
 
   // Vue arbre généalogique

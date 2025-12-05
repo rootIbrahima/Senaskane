@@ -118,11 +118,11 @@ export const AjouterCeremoniesScreen = ({ navigation }) => {
   const getPlaceholderTitre = () => {
     switch (typeCeremonie) {
       case 'mariage':
-        return 'Ex: Mariage de Jean et Marie';
+        return 'Ex: Mariage ';
       case 'bapteme':
         return 'Ex: Baptême de Pierre';
       case 'deces':
-        return 'Ex: Décès de Paul Dupont';
+        return 'Ex: Décès de ';
       case 'tour_famille':
         return 'Ex: Tour de famille 2025';
       default:
@@ -273,7 +273,7 @@ export const AjouterCeremoniesScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Membre principal</Text>
+            <Text style={styles.label}>Membre concerné</Text>
             <View style={styles.pickerContainer}>
               <Ionicons name="person-outline" size={20} color={COLORS.textSecondary} style={styles.pickerIcon} />
               <Picker

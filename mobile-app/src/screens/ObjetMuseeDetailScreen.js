@@ -186,12 +186,7 @@ export const ObjetMuseeDetailScreen = ({ route, navigation }) => {
           </View>
         )}
 
-        <View style={styles.infoBox}>
-          <Ionicons name="information-circle" size={20} color={COLORS.info} />
-          <Text style={styles.infoText}>
-            Cet objet fait partie du musée familial et conserve les souvenirs de la famille.
-          </Text>
-        </View>
+        
       </View>
     </ScrollView>
   );
