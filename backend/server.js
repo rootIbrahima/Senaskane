@@ -39,8 +39,30 @@ app.use(helmet({
 }));
 
 // CORS - Autoriser les requêtes cross-origin
+const allowedOrigins = [
+    'http://localhost:8081',
+    'http://localhost:19006',
+    'http://localhost:3000',
+    'https://senaskane.onrender.com',
+    'exp://localhost:8081',
+];
+
+// Ajouter les origines depuis la variable d'environnement si elle existe
+if (process.env.ALLOWED_ORIGINS) {
+    allowedOrigins.push(...process.env.ALLOWED_ORIGINS.split(','));
+}
+
 const corsOptions = {
-    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*',
+    origin: function (origin, callback) {
+        // Permettre les requêtes sans origine (mobile apps, curl, etc.)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     optionsSuccessStatus: 200
 };
