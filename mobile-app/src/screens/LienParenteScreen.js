@@ -8,6 +8,7 @@ import {
   Modal,
   FlatList,
   Alert,
+  TextInput,
 } from 'react-native';
 import { Button, Card } from '../components';
 import { membreApi } from '../api/membreApi';
@@ -192,11 +193,11 @@ export const LienParenteScreen = ({ route, navigation }) => {
 
           <View style={styles.searchContainer}>
             <Ionicons name="search" size={20} color={COLORS.textSecondary} />
-            <input
+            <TextInput
               style={styles.searchInput}
               placeholder="Rechercher un membre..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChangeText={setSearchQuery}
             />
           </View>
 

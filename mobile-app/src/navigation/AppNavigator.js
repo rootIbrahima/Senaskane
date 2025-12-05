@@ -24,6 +24,8 @@ import {
   GestionFinanciereScreen,
   AjouterObjetMuseeScreen,
   ObjetMuseeDetailScreen,
+  RechercheScreen,
+  LienParenteScreen,
 } from '../screens';
 
 const Stack = createNativeStackNavigator();
@@ -40,6 +42,8 @@ const TabNavigator = () => {
             iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'Membres') {
             iconName = focused ? 'people' : 'people-outline';
+          } else if (route.name === 'Recherche') {
+            iconName = focused ? 'search' : 'search-outline';
           } else if (route.name === 'Ceremonies') {
             iconName = focused ? 'calendar' : 'calendar-outline';
           } else if (route.name === 'Profile') {
@@ -68,6 +72,11 @@ const TabNavigator = () => {
         name="Membres"
         component={MembresScreen}
         options={{ title: 'Membres' }}
+      />
+      <Tab.Screen
+        name="Recherche"
+        component={RechercheScreen}
+        options={{ title: 'Recherche' }}
       />
       <Tab.Screen
         name="Ceremonies"
@@ -165,6 +174,11 @@ export const AppNavigator = () => {
         name="ObjetDetail"
         component={ObjetMuseeDetailScreen}
         options={{ title: 'Détails de l\'objet' }}
+      />
+      <Stack.Screen
+        name="LienParente"
+        component={LienParenteScreen}
+        options={{ title: 'Lien de parenté' }}
       />
     </Stack.Navigator>
   );
