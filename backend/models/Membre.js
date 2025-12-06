@@ -3,91 +3,41 @@ const db = require('../config/database');
 
 class Membre {
     /**
-     * Générer un numéro d'identification hiérarchique pour un membre
-     * Format hiérarchique:
-     * - Racines (sans parents): FAM{familleId}-001, FAM{familleId}-002, FAM{familleId}-003, ...
-     * - Enfants: {numeroParent}.001, {numeroParent}.002, ...
-     * - Exemple: Parent FAM2-002 → Enfants FAM2-002.001, FAM2-002.002, etc.
+     * Générer un numéro d'identification simple pour un membre
+     * Format simple: FAM{familleId}-001, FAM{familleId}-002, FAM{familleId}-003, ...
+     * Tous les membres de la famille ont un numéro séquentiel simple
      *
      * @param {number} familleId - ID de la famille
-     * @param {number|null} pereId - ID du père (prioritaire)
-     * @param {number|null} mereId - ID de la mère (si pas de père)
-     * @returns {string} Numéro d'identification hiérarchique
+     * @param {number|null} pereId - ID du père (non utilisé, gardé pour compatibilité)
+     * @param {number|null} mereId - ID de la mère (non utilisé, gardé pour compatibilité)
+     * @returns {string} Numéro d'identification simple
      */
     static async genererNumeroIdentification(familleId, pereId = null, mereId = null) {
         try {
-            // Déterminer le parent de référence (père prioritaire, sinon mère)
-            const parentId = pereId || mereId;
-
             // Préfixe de famille
             const famillePrefix = `FAM${familleId}-`;
 
-            // CAS 1: Membre racine (pas de parent)
-            if (!parentId) {
-                // Trouver le numéro maximum existant pour cette famille
-                const [maxNumero] = await db.execute(`
-                    SELECT numero_identification
-                    FROM membre
-                    WHERE famille_id = ?
-                    AND numero_identification LIKE ?
-                    AND numero_identification NOT LIKE '%.%'
-                    ORDER BY CAST(SUBSTRING(numero_identification, LENGTH(?) + 1) AS UNSIGNED) DESC
-                    LIMIT 1
-                `, [familleId, `${famillePrefix}%`, famillePrefix]);
-
-                let compteur = 1;
-                if (maxNumero.length > 0) {
-                    // Extraire le numéro du dernier membre racine
-                    const dernierNumero = maxNumero[0].numero_identification;
-                    const match = dernierNumero.match(/FAM\d+-(\d+)/);
-                    if (match) {
-                        compteur = parseInt(match[1]) + 1;
-                    }
-                }
-
-                return `${famillePrefix}${String(compteur).padStart(3, '0')}`; // FAM2-001, FAM2-002, FAM2-003, ...
-            }
-
-            // CAS 2: Enfant (a un parent)
-            // Récupérer le numéro du parent
-            const [parent] = await db.execute(
-                'SELECT numero_identification FROM membre WHERE id = ?',
-                [parentId]
-            );
-
-            if (!parent || parent.length === 0) {
-                throw new Error('Parent introuvable');
-            }
-
-            const numeroParent = parent[0].numero_identification;
-
-            // Trouver le numéro maximum parmi les enfants de ce parent
-            const [maxEnfant] = await db.execute(`
-                SELECT m.numero_identification
-                FROM membre m
-                INNER JOIN lien_parental lp ON m.id = lp.enfant_id
-                WHERE lp.parent_id = ?
-                AND m.numero_identification LIKE ?
-                ORDER BY CAST(SUBSTRING_INDEX(m.numero_identification, '.', -1) AS UNSIGNED) DESC
+            // Trouver le numéro maximum existant pour cette famille
+            const [maxNumero] = await db.execute(`
+                SELECT numero_identification
+                FROM membre
+                WHERE famille_id = ?
+                AND numero_identification LIKE ?
+                ORDER BY CAST(SUBSTRING(numero_identification, LENGTH(?) + 1) AS UNSIGNED) DESC
                 LIMIT 1
-            `, [parentId, `${numeroParent}.%`]);
+            `, [familleId, `${famillePrefix}%`, famillePrefix]);
 
-            let compteurEnfant = 1;
-            if (maxEnfant.length > 0) {
-                // Extraire le dernier numéro d'enfant
-                const dernierNumero = maxEnfant[0].numero_identification;
-                const parts = dernierNumero.split('.');
-                const lastPart = parts[parts.length - 1];
-                const match = lastPart.match(/^(\d+)/);
+            let compteur = 1;
+            if (maxNumero.length > 0) {
+                // Extraire le numéro du dernier membre
+                const dernierNumero = maxNumero[0].numero_identification;
+                const match = dernierNumero.match(/FAM\d+-(\d+)/);
                 if (match) {
-                    compteurEnfant = parseInt(match[1]) + 1;
+                    compteur = parseInt(match[1]) + 1;
                 }
             }
 
-            // Format: {numeroParent}.{compteur}
-            const numeroIdentification = `${numeroParent}.${String(compteurEnfant).padStart(3, '0')}`;
-
-            return numeroIdentification;
+            return `${famillePrefix}${String(compteur).padStart(3, '0')}`; // FAM7-001, FAM7-002, FAM7-003, ...
         } catch (error) {
             throw new Error('Erreur lors de la génération du numéro d\'identification: ' + error.message);
         }
