@@ -20,6 +20,7 @@ const museeRoutes = require('./routes/musee');
 const rechercheRoutes = require('./routes/recherche');
 const bandePassanteRoutes = require('./routes/bandePassante');
 const cotisationRoutes = require('./routes/cotisation');
+const adminRoutes = require('./routes/admin');
 
 
 const app = express();
@@ -150,6 +151,7 @@ app.use('/api/musee', museeRoutes);
 app.use('/api/recherche', rechercheRoutes);
 app.use('/api/bande-passante', bandePassanteRoutes);
 app.use('/api/cotisation', cotisationRoutes);
+app.use('/api/admin', adminRoutes);
 
 
 // ===========================
