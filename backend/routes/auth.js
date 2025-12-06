@@ -382,7 +382,7 @@ router.get('/mon-code', authenticateToken, async (req, res) => {
         }
 
         const [familles] = await db.execute(
-            'SELECT code_acces, nom_famille FROM famille WHERE id = ?',
+            'SELECT code_acces, nom as nom_famille FROM famille WHERE id = ?',
             [familleId]
         );
 
