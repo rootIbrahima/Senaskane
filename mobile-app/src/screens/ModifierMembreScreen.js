@@ -76,28 +76,12 @@ export const ModifierMembreScreen = ({ route, navigation }) => {
         informationsSupplementaires: formData.informationsSupplementaires || null,
       };
 
-      const response = await membreApi.updateMembre(membre.id, dataToSend);
+      await membreApi.updateMembre(membre.id, dataToSend);
 
-      if (response.data?.compteUtilisateur) {
-        const compte = response.data.compteUtilisateur;
-        const message = `Membre modifié avec succès !\n\n` +
-          `Un compte utilisateur a été créé :\n` +
-          `Login: ${compte.login}\n` +
-          `Mot de passe: ${compte.motDePasse}\n` +
-          `Code d'activation: ${compte.codeActivation}\n\n` +
-          `Communiquez ces identifiants au membre.`;
-
-        if (Platform.OS === 'web') {
-          alert(message);
-        } else {
-          Alert.alert('Succès', message);
-        }
+      if (Platform.OS === 'web') {
+        alert('Membre modifié avec succès !');
       } else {
-        if (Platform.OS === 'web') {
-          alert('Membre modifié avec succès !');
-        } else {
-          Alert.alert('Succès', 'Membre modifié avec succès !');
-        }
+        Alert.alert('Succès', 'Membre modifié avec succès !');
       }
 
       navigation.goBack();

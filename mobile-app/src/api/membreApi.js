@@ -59,24 +59,6 @@ export const membreApi = {
     return response.data;
   },
 
-  // Ajouter un mariage
-  addMariage: async (data) => {
-    const response = await api.post('/membre/mariage', data);
-    return response.data;
-  },
-
-  // Supprimer un mariage
-  deleteMariage: async (id) => {
-    const response = await api.delete(`/membre/mariage/${id}`);
-    return response.data;
-  },
-
-  // Modifier un mariage
-  updateMariage: async (id, data) => {
-    const response = await api.put(`/membre/mariage/${id}`, data);
-    return response.data;
-  },
-
   // Rechercher par nom/prénom
   rechercherParNom: async (nom) => {
     console.log('🔍 Recherche par nom - Input:', nom);

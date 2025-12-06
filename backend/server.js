@@ -14,11 +14,9 @@ if (process.env.NODE_ENV !== 'production') {
 const authRoutes = require('./routes/auth');
 const familleRoutes = require('./routes/famille');
 const membreRoutes = require('./routes/membre');
-const invitationRoutes = require('./routes/invitation');
 const ceremonieRoutes = require('./routes/ceremonie');
 const museeRoutes = require('./routes/musee');
 const rechercheRoutes = require('./routes/recherche');
-const bandePassanteRoutes = require('./routes/bandePassante');
 const cotisationRoutes = require('./routes/cotisation');
 const adminRoutes = require('./routes/admin');
 
@@ -132,11 +130,10 @@ app.get('/', (req, res) => {
             auth: '/api/auth',
             famille: '/api/famille',
             membre: '/api/membre',
-            invitation: '/api/invitation',
             ceremonie: '/api/ceremonie',
             musee: '/api/musee',
             recherche: '/api/recherche',
-            bandePassante: '/api/bande-passante'
+            cotisation: '/api/cotisation'
         }
     });
 });
@@ -145,11 +142,9 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/famille', familleRoutes);
 app.use('/api/membre', membreRoutes);
-app.use('/api/invitation', invitationRoutes);
 app.use('/api/ceremonie', ceremonieRoutes);
 app.use('/api/musee', museeRoutes);
 app.use('/api/recherche', rechercheRoutes);
-app.use('/api/bande-passante', bandePassanteRoutes);
 app.use('/api/cotisation', cotisationRoutes);
 app.use('/api/admin', adminRoutes);
 
@@ -269,11 +264,9 @@ const server = app.listen(PORT, HOST, () => {
     console.log(`   - Auth: http://localhost:${PORT}/api/auth`);
     console.log(`   - Famille: http://localhost:${PORT}/api/famille`);
     console.log(`   - Membre: http://localhost:${PORT}/api/membre`);
-    console.log(`   - Invitation: http://localhost:${PORT}/api/invitation`);
     console.log(`   - Cérémonie: http://localhost:${PORT}/api/ceremonie`);
     console.log(`   - Musée: http://localhost:${PORT}/api/musee`);
     console.log(`   - Recherche: http://localhost:${PORT}/api/recherche`);
-    console.log(`   - Bande Passante: http://localhost:${PORT}/api/bande-passante`);
     console.log(`   - Cotisation: http://localhost:${PORT}/api/cotisation`);
     console.log('='.repeat(50));
 });

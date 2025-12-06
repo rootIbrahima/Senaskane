@@ -24,15 +24,27 @@ class Membre {
 
             // CAS 1: Membre racine (pas de parent)
             if (!parentId) {
-                // Compter les racines existantes (membres sans parents)
-                const [racines] = await db.execute(`
-                    SELECT COUNT(DISTINCT m.id) as total
-                    FROM membre m
-                    LEFT JOIN lien_parental lp ON m.id = lp.enfant_id
-                    WHERE m.famille_id = ? AND lp.id IS NULL
-                `, [familleId]);
+                // Trouver le numéro maximum existant pour cette famille
+                const [maxNumero] = await db.execute(`
+                    SELECT numero_identification
+                    FROM membre
+                    WHERE famille_id = ?
+                    AND numero_identification LIKE ?
+                    AND numero_identification NOT LIKE '%.%'
+                    ORDER BY CAST(SUBSTRING(numero_identification, LENGTH(?) + 1) AS UNSIGNED) DESC
+                    LIMIT 1
+                `, [familleId, `${famillePrefix}%`, famillePrefix]);
 
-                const compteur = racines[0].total + 1;
+                let compteur = 1;
+                if (maxNumero.length > 0) {
+                    // Extraire le numéro du dernier membre racine
+                    const dernierNumero = maxNumero[0].numero_identification;
+                    const match = dernierNumero.match(/FAM\d+-(\d+)/);
+                    if (match) {
+                        compteur = parseInt(match[1]) + 1;
+                    }
+                }
+
                 return `${famillePrefix}${String(compteur).padStart(3, '0')}`; // FAM2-001, FAM2-002, FAM2-003, ...
             }
 
@@ -49,28 +61,31 @@ class Membre {
 
             const numeroParent = parent[0].numero_identification;
 
-            // Compter les enfants existants de ce parent
-            const [enfants] = await db.execute(`
-                SELECT COUNT(*) as total
-                FROM lien_parental
-                WHERE parent_id = ?
-            `, [parentId]);
+            // Trouver le numéro maximum parmi les enfants de ce parent
+            const [maxEnfant] = await db.execute(`
+                SELECT m.numero_identification
+                FROM membre m
+                INNER JOIN lien_parental lp ON m.id = lp.enfant_id
+                WHERE lp.parent_id = ?
+                AND m.numero_identification LIKE ?
+                ORDER BY CAST(SUBSTRING_INDEX(m.numero_identification, '.', -1) AS UNSIGNED) DESC
+                LIMIT 1
+            `, [parentId, `${numeroParent}.%`]);
 
-            const compteurEnfant = enfants[0].total + 1;
+            let compteurEnfant = 1;
+            if (maxEnfant.length > 0) {
+                // Extraire le dernier numéro d'enfant
+                const dernierNumero = maxEnfant[0].numero_identification;
+                const parts = dernierNumero.split('.');
+                const lastPart = parts[parts.length - 1];
+                const match = lastPart.match(/^(\d+)/);
+                if (match) {
+                    compteurEnfant = parseInt(match[1]) + 1;
+                }
+            }
 
             // Format: {numeroParent}.{compteur}
             const numeroIdentification = `${numeroParent}.${String(compteurEnfant).padStart(3, '0')}`;
-
-            // Vérifier l'unicité
-            const [existing] = await db.execute(
-                'SELECT id FROM membre WHERE numero_identification = ?',
-                [numeroIdentification]
-            );
-
-            if (existing.length > 0) {
-                // En cas de collision rare, ajouter un suffixe temporel
-                return `${numeroParent}.${String(compteurEnfant).padStart(3, '0')}_${Date.now()}`;
-            }
 
             return numeroIdentification;
         } catch (error) {

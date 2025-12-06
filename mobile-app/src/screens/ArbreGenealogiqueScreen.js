@@ -32,13 +32,6 @@ export const ArbreGenealogiqueScreen = ({ navigation }) => {
   const [typeLien, setTypeLien] = useState('pere');
   const [viewMode, setViewMode] = useState('tree'); // 'list' ou 'tree'
 
-  // États pour la gestion des mariages
-  const [modalMariageVisible, setModalMariageVisible] = useState(false);
-  const [conjoint1Selected, setConjoint1Selected] = useState(null);
-  const [conjoint2Selected, setConjoint2Selected] = useState(null);
-  const [dateMariage, setDateMariage] = useState('');
-  const [lieuMariage, setLieuMariage] = useState('');
-
   useEffect(() => {
     loadArbre();
   }, []);
@@ -194,112 +187,13 @@ export const ArbreGenealogiqueScreen = ({ navigation }) => {
     }
   };
 
-  // Ouvrir le modal pour ajouter un mariage
-  const openAddMariageModal = () => {
-    setConjoint1Selected(null);
-    setConjoint2Selected(null);
-    setDateMariage('');
-    setLieuMariage('');
-    setModalMariageVisible(true);
-  };
-
-  // Ajouter un mariage
-  const handleAddMariage = async () => {
-    if (!conjoint1Selected || !conjoint2Selected) {
-      const msg = 'Veuillez sélectionner les deux conjoints';
-      if (Platform.OS === 'web') {
-        alert(msg);
-      } else {
-        Alert.alert('Attention', msg);
-      }
-      return;
-    }
-
-    if (conjoint1Selected === conjoint2Selected) {
-      const msg = 'Un membre ne peut pas se marier avec lui-même';
-      if (Platform.OS === 'web') {
-        alert(msg);
-      } else {
-        Alert.alert('Attention', msg);
-      }
-      return;
-    }
-
-    try {
-      await membreApi.addMariage({
-        conjoint1Id: conjoint1Selected,
-        conjoint2Id: conjoint2Selected,
-        dateMariage: dateMariage || null,
-        lieuMariage: lieuMariage || null,
-        statut: 'actif'
-      });
-
-      const msg = 'Mariage ajouté avec succès';
-      if (Platform.OS === 'web') {
-        alert(msg);
-      } else {
-        Alert.alert('Succès', msg);
-      }
-
-      setModalMariageVisible(false);
-      loadArbre();
-    } catch (error) {
-      console.error('Erreur ajout mariage:', error);
-      const errorMsg = error.response?.data?.error || 'Erreur lors de l\'ajout du mariage';
-      if (Platform.OS === 'web') {
-        alert(errorMsg);
-      } else {
-        Alert.alert('Erreur', errorMsg);
-      }
-    }
-  };
-
-  // Supprimer un mariage
-  const handleDeleteMariage = async (mariageId, conjoint1Nom, conjoint2Nom) => {
-    const confirmFunc = Platform.OS === 'web'
-      ? (message) => window.confirm(message)
-      : (message, callback) => {
-          Alert.alert(
-            'Confirmer la suppression',
-            message,
-            [
-              { text: 'Annuler', style: 'cancel' },
-              { text: 'Supprimer', style: 'destructive', onPress: callback },
-            ]
-          );
-        };
-
-    const message = `Voulez-vous vraiment supprimer le mariage entre ${conjoint1Nom} et ${conjoint2Nom} ?`;
-
-    if (Platform.OS === 'web') {
-      if (!confirmFunc(message)) return;
-      try {
-        await membreApi.deleteMariage(mariageId);
-        alert('Mariage supprimé');
-        loadArbre();
-      } catch (error) {
-        alert(error.response?.data?.error || 'Erreur lors de la suppression');
-      }
-    } else {
-      confirmFunc(message, async () => {
-        try {
-          await membreApi.deleteMariage(mariageId);
-          Alert.alert('Succès', 'Mariage supprimé');
-          loadArbre();
-        } catch (error) {
-          Alert.alert('Erreur', error.response?.data?.error || 'Erreur lors de la suppression');
-        }
-      });
-    }
-  };
-
   // Générer et exporter le PDF de l'arbre généalogique
   const exportToPDF = async () => {
     try {
       // Organiser les membres par génération
       const membreMap = {};
       arbre.membres.forEach(m => {
-        membreMap[m.id] = { ...m, children: [], parents: [] };
+        membreMap[m.id] = { ...m, children: [], parents: [], spouse: null };
       });
 
       arbre.liens.forEach(lien => {
@@ -309,51 +203,95 @@ export const ArbreGenealogiqueScreen = ({ navigation }) => {
         }
       });
 
+      // Ajouter les informations de mariage
+      arbre.mariages?.forEach(mariage => {
+        if (membreMap[mariage.conjoint1_id] && membreMap[mariage.conjoint2_id]) {
+          membreMap[mariage.conjoint1_id].spouse = mariage.conjoint2_id;
+          membreMap[mariage.conjoint2_id].spouse = mariage.conjoint1_id;
+        }
+      });
+
       // Trouver les racines
       const roots = arbre.membres.filter(m => membreMap[m.id].parents.length === 0);
 
-      // Fonction pour construire l'arbre HTML par génération
-      const buildTreeHTML = (membreId, visited = new Set(), level = 0) => {
+      // Fonction pour construire une carte de personne
+      const buildPersonCard = (membre) => {
+        const sexeIcon = membre.sexe === 'M' ? '♂' : '♀';
+        const sexeColor = membre.sexe === 'M' ? '#2196F3' : '#E91E63';
+
+        return `
+          <div class="person-card" style="border-color: ${sexeColor};">
+            <div class="person-icon" style="background-color: ${sexeColor};">
+              ${sexeIcon}
+            </div>
+            <div class="person-name">${membre.prenom} ${membre.nom}</div>
+            ${membre.dateNaissance ? `<div class="person-info">Né(e): ${membre.dateNaissance}</div>` : ''}
+            ${membre.profession ? `<div class="person-info">${membre.profession}</div>` : ''}
+          </div>
+        `;
+      };
+
+      // Fonction pour construire l'arbre HTML avec structure visuelle
+      const buildTreeHTML = (membreId, visited = new Set()) => {
         if (visited.has(membreId)) return '';
         visited.add(membreId);
 
         const membre = membreMap[membreId];
         if (!membre) return '';
 
-        const indent = '&nbsp;&nbsp;&nbsp;&nbsp;'.repeat(level);
-        const sexeIcon = membre.sexe === 'M' ? '♂' : '♀';
-        const sexeColor = membre.sexe === 'M' ? '#2196F3' : '#E91E63';
+        // Vérifier si ce membre a un conjoint
+        const spouse = membre.spouse ? membreMap[membre.spouse] : null;
+        if (spouse && visited.has(spouse.id)) return ''; // Éviter les doublons
 
-        let html = `
-          <div style="margin-left: ${level * 20}px; margin-bottom: 10px; page-break-inside: avoid;">
-            <div style="padding: 10px; border: 2px solid ${sexeColor}; border-radius: 8px; background-color: #f9f9f9;">
-              <div style="font-weight: bold; color: ${sexeColor}; font-size: 16px;">
-                ${sexeIcon} ${membre.prenom} ${membre.nom}
-              </div>
-              <div style="font-size: 12px; color: #666; margin-top: 4px;">
-                N°: ${membre.numero_identification || 'N/A'}
-              </div>
-              ${membre.dateNaissance ? `<div style="font-size: 11px; color: #888;">Né(e): ${membre.dateNaissance}</div>` : ''}
-              ${membre.profession ? `<div style="font-size: 11px; color: #888;">Profession: ${membre.profession}</div>` : ''}
-            </div>
-          </div>
-        `;
+        // Récupérer les enfants uniques (pas de doublon même si deux parents)
+        let childrenIds = new Set(membre.children || []);
+        if (spouse) {
+          visited.add(spouse.id);
+          (spouse.children || []).forEach(childId => childrenIds.add(childId));
+        }
+        const children = Array.from(childrenIds).map(id => membreMap[id]).filter(Boolean);
 
-        // Ajouter les enfants
-        if (membre.children && membre.children.length > 0) {
-          membre.children.forEach(childId => {
-            html += buildTreeHTML(childId, visited, level + 1);
+        let html = '<div class="tree-node">';
+
+        // Couple ou personne seule
+        html += '<div class="couple-container">';
+        if (spouse) {
+          html += '<div class="couple">';
+          html += buildPersonCard(membre);
+          html += '<div class="marriage-line"></div>';
+          html += buildPersonCard(spouse);
+          html += '</div>';
+        } else {
+          html += buildPersonCard(membre);
+        }
+        html += '</div>';
+
+        // Si des enfants existent, ajouter la ligne verticale et les enfants
+        if (children.length > 0) {
+          html += '<div class="vertical-line"></div>';
+          html += '<div class="horizontal-line"></div>';
+          html += '<div class="children-container">';
+
+          children.forEach((child, index) => {
+            html += '<div class="child-wrapper">';
+            html += '<div class="child-connector"></div>';
+            html += buildTreeHTML(child.id, visited);
+            html += '</div>';
           });
+
+          html += '</div>';
         }
 
+        html += '</div>';
         return html;
       };
 
       // Construire le HTML complet
-      let treeHTML = '';
+      let treeHTML = '<div class="tree-container">';
       roots.forEach(root => {
         treeHTML += buildTreeHTML(root.id);
       });
+      treeHTML += '</div>';
 
       const html = `
         <!DOCTYPE html>
@@ -362,51 +300,167 @@ export const ArbreGenealogiqueScreen = ({ navigation }) => {
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <style>
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+              }
+
               body {
                 font-family: 'Helvetica', 'Arial', sans-serif;
                 padding: 20px;
                 background-color: white;
+                overflow-x: auto;
               }
+
               h1 {
                 color: #1e3a8a;
                 text-align: center;
-                margin-bottom: 30px;
+                margin-bottom: 20px;
                 border-bottom: 3px solid #1e3a8a;
                 padding-bottom: 10px;
+                font-size: 24px;
               }
+
               .info {
                 text-align: center;
                 color: #666;
+                margin-bottom: 30px;
+                font-size: 11px;
+              }
+
+              .tree-container {
+                display: flex;
+                justify-content: center;
+                padding: 20px;
+                min-width: fit-content;
+              }
+
+              .tree-node {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                position: relative;
+                padding: 0 10px;
+              }
+
+              .couple-container {
                 margin-bottom: 20px;
-                font-size: 12px;
               }
-              .generation-title {
-                font-size: 18px;
+
+              .couple {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                position: relative;
+              }
+
+              .marriage-line {
+                width: 20px;
+                height: 2px;
+                background-color: #1e3a8a;
+                position: relative;
+              }
+
+              .person-card {
+                background: white;
+                border: 2px solid;
+                border-radius: 8px;
+                padding: 10px;
+                min-width: 140px;
+                text-align: center;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                page-break-inside: avoid;
+              }
+
+              .person-icon {
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 8px;
+                color: white;
+                font-size: 16px;
                 font-weight: bold;
-                color: #1e3a8a;
-                margin-top: 30px;
-                margin-bottom: 15px;
-                border-left: 4px solid #1e3a8a;
-                padding-left: 10px;
               }
+
+              .person-name {
+                font-weight: bold;
+                font-size: 12px;
+                color: #333;
+                margin-bottom: 4px;
+                word-wrap: break-word;
+              }
+
+              .person-info {
+                font-size: 9px;
+                color: #666;
+                margin-top: 2px;
+              }
+
+              .vertical-line {
+                width: 2px;
+                height: 30px;
+                background-color: #1e3a8a;
+                margin: 0 auto;
+              }
+
+              .horizontal-line {
+                height: 2px;
+                background-color: #1e3a8a;
+                position: absolute;
+                top: 30px;
+                left: 0;
+                right: 0;
+              }
+
+              .children-container {
+                display: flex;
+                gap: 30px;
+                position: relative;
+                margin-top: 30px;
+              }
+
+              .child-wrapper {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                position: relative;
+              }
+
+              .child-connector {
+                width: 2px;
+                height: 30px;
+                background-color: #1e3a8a;
+                margin-bottom: 0;
+              }
+
               @media print {
-                body { margin: 0; padding: 10px; }
-                @page { margin: 1cm; }
+                body {
+                  margin: 0;
+                  padding: 10px;
+                }
+                @page {
+                  size: landscape;
+                  margin: 1cm;
+                }
+                .tree-container {
+                  transform: scale(0.95);
+                  transform-origin: top left;
+                }
               }
             </style>
           </head>
           <body>
             <h1>🌳 Arbre Généalogique - Baïla Généa</h1>
             <div class="info">
-              Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}
-            </div>
-            <div class="info">
+              Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}<br>
               <strong>Total: ${arbre.membres.length} membres</strong> |
               <strong>${arbre.liens.length} liens parentaux</strong>
             </div>
-            <div style="margin-top: 30px;">
-              ${treeHTML}
-            </div>
+            ${treeHTML}
           </body>
         </html>
       `;
@@ -817,16 +871,6 @@ export const ArbreGenealogiqueScreen = ({ navigation }) => {
         />
       )}
 
-      {/* Bouton flottant pour ajouter un mariage */}
-      {user?.role === 'admin' && (
-        <TouchableOpacity
-          style={styles.fabButton}
-          onPress={openAddMariageModal}
-        >
-          <Ionicons name="heart" size={24} color={COLORS.white} />
-        </TouchableOpacity>
-      )}
-
       {/* Modal pour ajouter un lien parental */}
       <Modal
         visible={modalVisible}
@@ -885,111 +929,6 @@ export const ArbreGenealogiqueScreen = ({ navigation }) => {
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonPrimary]}
                 onPress={handleAddLien}
-              >
-                <Text style={styles.modalButtonPrimaryText}>Ajouter</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Modal pour ajouter un mariage */}
-      <Modal
-        visible={modalMariageVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setModalMariageVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Ajouter un mariage</Text>
-            <Text style={styles.modalSubtitle}>
-              Sélectionnez les deux conjoints
-            </Text>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Premier conjoint</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={conjoint1Selected}
-                  onValueChange={setConjoint1Selected}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="-- Choisir --" value={null} />
-                  {arbre.membres.map(membre => (
-                    <Picker.Item
-                      key={membre.id}
-                      label={`${membre.prenom} ${membre.nom} (${membre.sexe})`}
-                      value={membre.id}
-                    />
-                  ))}
-                </Picker>
-              </View>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Deuxième conjoint</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={conjoint2Selected}
-                  onValueChange={setConjoint2Selected}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="-- Choisir --" value={null} />
-                  {arbre.membres.map(membre => (
-                    <Picker.Item
-                      key={membre.id}
-                      label={`${membre.prenom} ${membre.nom} (${membre.sexe})`}
-                      value={membre.id}
-                    />
-                  ))}
-                </Picker>
-              </View>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Date de mariage (optionnel)</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  value={dateMariage}
-                  onChange={(e) => setDateMariage(e.target.value)}
-                  style={{
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: '1px solid #E0E0E0',
-                    fontSize: '16px',
-                    width: '100%',
-                  }}
-                />
-              ) : (
-                <Input
-                  placeholder="AAAA-MM-JJ"
-                  value={dateMariage}
-                  onChangeText={setDateMariage}
-                />
-              )}
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Lieu de mariage (optionnel)</Text>
-              <Input
-                placeholder="Ville, Pays"
-                value={lieuMariage}
-                onChangeText={setLieuMariage}
-              />
-            </View>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonSecondary]}
-                onPress={() => setModalMariageVisible(false)}
-              >
-                <Text style={styles.modalButtonSecondaryText}>Annuler</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonPrimary]}
-                onPress={handleAddMariage}
               >
                 <Text style={styles.modalButtonPrimaryText}>Ajouter</Text>
               </TouchableOpacity>

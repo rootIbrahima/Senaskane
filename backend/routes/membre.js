@@ -2,7 +2,6 @@
 const express = require('express');
 const router = express.Router();
 const Membre = require('../models/Membre');
-const InvitationService = require('../services/InvitationService');
 const multer = require('multer');
 const path = require('path');
 const db = require('../config/database');
@@ -88,44 +87,6 @@ router.post('/ajouter', authenticateToken, requireAdmin, upload.single('photo'),
             );
         }
 
-        // Créer automatiquement un compte utilisateur si email ou téléphone est fourni
-        let compteUtilisateur = null;
-        if (req.body.email || req.body.telephone) {
-            try {
-                const invitationData = await InvitationService.creerInvitation(
-                    adminId,
-                    familleId,
-                    {
-                        nom: req.body.nom,
-                        prenom: req.body.prenom,
-                        email: req.body.email || null,
-                        telephone: req.body.telephone || null
-                    }
-                );
-
-                compteUtilisateur = {
-                    login: invitationData.login,
-                    motDePasse: invitationData.motDePasseTemp,
-                    codeActivation: invitationData.codeActivation,
-                    notificationEnvoyee: false,
-                    methodeEnvoi: null,
-                    avertissement: 'Veuillez communiquer ces identifiants au membre.'
-                };
-
-                console.log(`✅ Compte utilisateur créé pour ${req.body.prenom} ${req.body.nom}`);
-                console.log(`   Login: ${invitationData.login}`);
-                console.log(`   Mot de passe: ${invitationData.motDePasseTemp}`);
-                console.log(`   Code activation: ${invitationData.codeActivation}`);
-
-                // TODO: Réactiver l'envoi d'email/SMS plus tard
-                // Pour l'instant, on affiche juste les credentials dans le popup
-
-            } catch (invitationError) {
-                console.error('⚠️ Erreur création compte utilisateur:', invitationError.message);
-                // On continue même si la création du compte échoue
-            }
-        }
-
         res.status(201).json({
             message: 'Membre ajouté avec succès',
             data: {
@@ -136,8 +97,7 @@ router.post('/ajouter', authenticateToken, requireAdmin, upload.single('photo'),
                 sexe: membre.sexe,
                 photo: membre.photo,
                 dateNaissance: membre.dateNaissance,
-                lieuNaissance: membre.lieuNaissance,
-                compteUtilisateur: compteUtilisateur
+                lieuNaissance: membre.lieuNaissance
             }
         });
 
@@ -306,70 +266,8 @@ router.put('/:id', authenticateToken, requireAdmin, upload.single('photo'), asyn
             );
         }
 
-        // Créer automatiquement un compte utilisateur si email ou téléphone est fourni
-        // et qu'il n'existe pas déjà un compte pour ce membre
-        let compteUtilisateur = null;
-        if (req.body.email || req.body.telephone) {
-            try {
-                // Vérifier si un compte existe déjà pour ce membre
-                const [existingUser] = await db.execute(
-                    'SELECT id FROM utilisateur WHERE nom = ? AND prenom = ? AND famille_id = ?',
-                    [req.body.nom || membre[0].nom, req.body.prenom || membre[0].prenom, familleId]
-                );
-
-                if (existingUser.length === 0) {
-                    const invitationData = await InvitationService.creerInvitation(
-                        adminId,
-                        familleId,
-                        {
-                            nom: req.body.nom || membre[0].nom,
-                            prenom: req.body.prenom || membre[0].prenom,
-                            email: req.body.email || null,
-                            telephone: req.body.telephone || null
-                        }
-                    );
-
-                    compteUtilisateur = {
-                        login: invitationData.login,
-                        motDePasse: invitationData.motDePasseTemp,
-                        codeActivation: invitationData.codeActivation
-                    };
-
-                    console.log(`✅ Compte utilisateur créé pour ${req.body.prenom || membre[0].prenom} ${req.body.nom || membre[0].nom}`);
-                    console.log(`   Login: ${invitationData.login}`);
-                    console.log(`   Mot de passe: ${invitationData.motDePasseTemp}`);
-                    console.log(`   Code activation: ${invitationData.codeActivation}`);
-
-                    // Envoyer l'invitation par email/SMS si possible
-                    if (req.body.email) {
-                        try {
-                            await InvitationService.envoyerInvitation(invitationData.utilisateurId, 'email');
-                            console.log(`📧 Invitation envoyée par email à ${req.body.email}`);
-                        } catch (emailError) {
-                            console.error('❌ Erreur envoi email:', emailError.message);
-                        }
-                    } else if (req.body.telephone) {
-                        try {
-                            await InvitationService.envoyerInvitation(invitationData.utilisateurId, 'sms');
-                            console.log(`📱 Invitation envoyée par SMS à ${req.body.telephone}`);
-                        } catch (smsError) {
-                            console.error('❌ Erreur envoi SMS:', smsError.message);
-                        }
-                    }
-                } else {
-                    console.log(`ℹ️ Un compte utilisateur existe déjà pour ce membre`);
-                }
-            } catch (invitationError) {
-                console.error('⚠️ Erreur création compte utilisateur:', invitationError.message);
-                // On continue même si la création du compte échoue
-            }
-        }
-
         res.json({
-            message: 'Membre mis à jour avec succès',
-            data: {
-                compteUtilisateur: compteUtilisateur
-            }
+            message: 'Membre mis à jour avec succès'
         });
 
     } catch (error) {
@@ -563,157 +461,6 @@ router.get('/recherche/nom/:nom', authenticateToken, async (req, res) => {
 
     } catch (error) {
         console.error('Erreur recherche par nom:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-/**
- * POST /api/membre/mariage
- * Ajouter un mariage entre deux membres
- */
-router.post('/mariage', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const familleId = req.user.familleId;
-        const { conjoint1Id, conjoint2Id, dateMariage, lieuMariage, statut } = req.body;
-
-        // Validation
-        if (!conjoint1Id || !conjoint2Id) {
-            return res.status(400).json({ error: 'Les deux conjoints sont requis' });
-        }
-
-        if (conjoint1Id === conjoint2Id) {
-            return res.status(400).json({ error: 'Un membre ne peut pas se marier avec lui-même' });
-        }
-
-        // Vérifier que les deux membres appartiennent à la même famille
-        const [conjoint1] = await db.execute(
-            'SELECT id, famille_id FROM membre WHERE id = ?',
-            [conjoint1Id]
-        );
-        const [conjoint2] = await db.execute(
-            'SELECT id, famille_id FROM membre WHERE id = ?',
-            [conjoint2Id]
-        );
-
-        if (conjoint1.length === 0 || conjoint2.length === 0) {
-            return res.status(404).json({ error: 'Un ou plusieurs membres introuvables' });
-        }
-
-        if (conjoint1[0].famille_id !== familleId || conjoint2[0].famille_id !== familleId) {
-            return res.status(403).json({ error: 'Les membres doivent appartenir à votre famille' });
-        }
-
-        // Vérifier qu'un mariage n'existe pas déjà entre ces deux personnes
-        const [existing] = await db.execute(
-            `SELECT id FROM mariage
-             WHERE (conjoint1_id = ? AND conjoint2_id = ?)
-                OR (conjoint1_id = ? AND conjoint2_id = ?)`,
-            [conjoint1Id, conjoint2Id, conjoint2Id, conjoint1Id]
-        );
-
-        if (existing.length > 0) {
-            return res.status(400).json({ error: 'Un mariage existe déjà entre ces deux membres' });
-        }
-
-        // Insérer le mariage
-        const [result] = await db.execute(
-            `INSERT INTO mariage
-             (famille_id, conjoint1_id, conjoint2_id, date_mariage, lieu_mariage, statut)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [familleId, conjoint1Id, conjoint2Id, dateMariage || null, lieuMariage || null, statut || 'actif']
-        );
-
-        res.status(201).json({
-            message: 'Mariage ajouté avec succès',
-            data: {
-                id: result.insertId,
-                conjoint1_id: conjoint1Id,
-                conjoint2_id: conjoint2Id,
-                date_mariage: dateMariage,
-                lieu_mariage: lieuMariage,
-                statut: statut || 'actif'
-            }
-        });
-
-    } catch (error) {
-        console.error('Erreur ajout mariage:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-/**
- * DELETE /api/membre/mariage/:id
- * Supprimer un mariage
- */
-router.delete('/mariage/:id', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const mariageId = req.params.id;
-        const familleId = req.user.familleId;
-
-        // Vérifier que le mariage appartient à la famille
-        const [mariage] = await db.execute(
-            'SELECT id, famille_id FROM mariage WHERE id = ?',
-            [mariageId]
-        );
-
-        if (mariage.length === 0) {
-            return res.status(404).json({ error: 'Mariage introuvable' });
-        }
-
-        if (mariage[0].famille_id !== familleId) {
-            return res.status(403).json({ error: 'Ce mariage n\'appartient pas à votre famille' });
-        }
-
-        // Supprimer le mariage
-        await db.execute('DELETE FROM mariage WHERE id = ?', [mariageId]);
-
-        res.json({ message: 'Mariage supprimé avec succès' });
-
-    } catch (error) {
-        console.error('Erreur suppression mariage:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-/**
- * PUT /api/membre/mariage/:id
- * Modifier un mariage (statut, date, lieu)
- */
-router.put('/mariage/:id', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const mariageId = req.params.id;
-        const familleId = req.user.familleId;
-        const { dateMariage, lieuMariage, statut, dateFin } = req.body;
-
-        // Vérifier que le mariage appartient à la famille
-        const [mariage] = await db.execute(
-            'SELECT id, famille_id FROM mariage WHERE id = ?',
-            [mariageId]
-        );
-
-        if (mariage.length === 0) {
-            return res.status(404).json({ error: 'Mariage introuvable' });
-        }
-
-        if (mariage[0].famille_id !== familleId) {
-            return res.status(403).json({ error: 'Ce mariage n\'appartient pas à votre famille' });
-        }
-
-        // Mettre à jour le mariage
-        await db.execute(
-            `UPDATE mariage
-             SET date_mariage = COALESCE(?, date_mariage),
-                 lieu_mariage = COALESCE(?, lieu_mariage),
-                 statut = COALESCE(?, statut),
-                 date_fin = ?
-             WHERE id = ?`,
-            [dateMariage, lieuMariage, statut, dateFin, mariageId]
-        );
-
-        res.json({ message: 'Mariage mis à jour avec succès' });
-
-    } catch (error) {
-        console.error('Erreur modification mariage:', error);
         res.status(500).json({ error: error.message });
     }
 });
