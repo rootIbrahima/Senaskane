@@ -377,6 +377,10 @@ router.get('/mon-code', authenticateToken, async (req, res) => {
     try {
         const familleId = req.user.familleId;
 
+        if (!familleId) {
+            return res.status(400).json({ error: 'familleId manquant dans le token. Veuillez vous reconnecter.' });
+        }
+
         const [familles] = await db.execute(
             'SELECT code_acces, nom_famille FROM famille WHERE id = ?',
             [familleId]
@@ -429,7 +433,21 @@ router.get('/mon-code', authenticateToken, async (req, res) => {
 
     } catch (error) {
         console.error('Erreur récupération code:', error);
-        res.status(500).json({ error: 'Erreur interne du serveur' });
+        console.error('Détails erreur:', error.message);
+        console.error('Stack:', error.stack);
+
+        // Si c'est une erreur SQL concernant la colonne code_acces
+        if (error.message && error.message.includes('code_acces')) {
+            return res.status(500).json({
+                error: 'La colonne code_acces n\'existe pas. Migration non exécutée.',
+                details: error.message
+            });
+        }
+
+        res.status(500).json({
+            error: 'Erreur interne du serveur',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 });
 
