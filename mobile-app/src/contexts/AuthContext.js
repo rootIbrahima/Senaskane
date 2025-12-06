@@ -53,6 +53,36 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithCode = async (codeAcces) => {
+    try {
+      const response = await authApi.loginWithCode(codeAcces);
+
+      if (response.token && response.famille) {
+        await AsyncStorage.setItem('token', response.token);
+        // Pour connexion par code, on stocke les infos famille comme user
+        const familleUser = {
+          familleId: response.famille.id,
+          familleName: response.famille.nom,
+          authMethod: 'code_famille'
+        };
+        await AsyncStorage.setItem('user', JSON.stringify(familleUser));
+
+        setUser(familleUser);
+        setIsAuthenticated(true);
+
+        return { success: true };
+      }
+
+      return { success: false, message: 'Réponse invalide du serveur' };
+    } catch (error) {
+      console.error('Erreur connexion par code:', error);
+      return {
+        success: false,
+        message: error.response?.data?.error || 'Code d\'accès invalide',
+      };
+    }
+  };
+
   const register = async (data) => {
     try {
       const response = await authApi.register(data);
@@ -95,6 +125,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         isAuthenticated,
         login,
+        loginWithCode,
         register,
         logout,
         updateUser,

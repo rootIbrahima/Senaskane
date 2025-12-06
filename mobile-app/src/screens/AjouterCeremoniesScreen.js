@@ -120,7 +120,7 @@ export const AjouterCeremoniesScreen = ({ navigation }) => {
       case 'mariage':
         return 'Ex: Mariage ';
       case 'bapteme':
-        return 'Ex: Baptême de Pierre';
+        return 'Ex: Baptême de ';
       case 'deces':
         return 'Ex: Décès de ';
       case 'tour_famille':

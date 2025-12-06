@@ -6,13 +6,10 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Image,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { Button, Input, ErrorMessage } from '../components';
 import { useAuth } from '../contexts/AuthContext';
-import { authApi } from '../api/authApi';
 import { COLORS, SPACING, FONT_SIZES } from '../utils/config';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -21,7 +18,7 @@ export const LoginWithCodeScreen = ({ navigation }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { setUser } = useAuth();
+  const { loginWithCode } = useAuth();
 
   const handleLogin = async () => {
     setError('');
@@ -33,26 +30,14 @@ export const LoginWithCodeScreen = ({ navigation }) => {
 
     setLoading(true);
 
-    try {
-      const data = await authApi.loginWithCode(codeAcces.trim());
+    const result = await loginWithCode(codeAcces.trim());
 
-      // Sauvegarder le token et les infos de famille
-      await setUser({
-        token: data.token,
-        famille: data.famille,
-        authMethod: 'code_famille'
-      });
+    setLoading(false);
 
-      // Navigation automatique vers HomeScreen via AuthContext
-    } catch (err) {
-      console.error('Erreur connexion par code:', err);
-      setError(
-        err.response?.data?.error ||
-        'Code d\'accès invalide. Veuillez vérifier et réessayer.'
-      );
-    } finally {
-      setLoading(false);
+    if (!result.success) {
+      setError(result.message || 'Code d\'accès invalide. Veuillez vérifier et réessayer.');
     }
+    // Si success, la navigation se fait automatiquement via AuthContext
   };
 
   return (
