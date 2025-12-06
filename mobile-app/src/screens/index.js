@@ -1,5 +1,6 @@
 export { SplashScreen } from './SplashScreen';
 export { LoginScreen } from './LoginScreen';
+export { LoginWithCodeScreen } from './LoginWithCodeScreen';
 export { RegisterScreen } from './RegisterScreen';
 export { ActivateAccountScreen } from './ActivateAccountScreen';
 export { HomeScreen } from './HomeScreen';

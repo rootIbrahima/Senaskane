@@ -62,6 +62,25 @@ export const LoginScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.form}>
+          {/* Bouton principal : Connexion par code */}
+          <View style={styles.codeLoginSection}>
+            <Text style={styles.codeLoginTitle}>Accès rapide famille</Text>
+            <Text style={styles.codeLoginSubtitle}>
+              Utilisez le code partagé par votre famille
+            </Text>
+            <Button
+              title="Connexion avec code"
+              onPress={() => navigation.navigate('LoginWithCode')}
+              style={styles.codeLoginButton}
+            />
+          </View>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OU</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
           <ErrorMessage message={error} />
 
           <Input
@@ -149,6 +168,44 @@ const styles = StyleSheet.create({
   },
   form: {
     width: '100%',
+  },
+  codeLoginSection: {
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 12,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
+    alignItems: 'center',
+  },
+  codeLoginTitle: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '700',
+    color: COLORS.primary,
+    marginBottom: SPACING.xs,
+  },
+  codeLoginSubtitle: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginBottom: SPACING.md,
+  },
+  codeLoginButton: {
+    width: '100%',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: SPACING.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  dividerText: {
+    marginHorizontal: SPACING.md,
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '500',
   },
   loginButton: {
     marginTop: SPACING.md,

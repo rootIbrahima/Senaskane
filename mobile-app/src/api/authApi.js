@@ -39,4 +39,22 @@ export const authApi = {
     const response = await api.post('/auth/activer-compte', data);
     return response.data;
   },
+
+  // Connexion avec code d'accès famille
+  loginWithCode: async (codeAcces) => {
+    const response = await api.post('/auth/code-famille', { codeAcces });
+    return response.data;
+  },
+
+  // Récupérer le code d'accès de ma famille
+  getMyCode: async () => {
+    const response = await api.get('/auth/mon-code');
+    return response.data;
+  },
+
+  // Générer un nouveau code pour ma famille
+  generateNewCode: async (familleId) => {
+    const response = await api.post(`/auth/generer-code/${familleId}`);
+    return response.data;
+  },
 };
