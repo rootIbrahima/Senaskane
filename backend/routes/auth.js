@@ -283,7 +283,7 @@ router.post('/code-famille', [
 
         // Rechercher la famille par code d'accès
         const [familles] = await db.execute(
-            'SELECT id, nom_famille as nom, code_acces FROM famille WHERE code_acces = ?',
+            'SELECT id, nom, code_acces FROM famille WHERE code_acces = ?',
             [codeAcces.toUpperCase()]
         );
 
