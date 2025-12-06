@@ -389,6 +389,10 @@ export const ArbreGenealogiqueScreen = ({ navigation }) => {
                 border-left: 4px solid #1e3a8a;
                 padding-left: 10px;
               }
+              @media print {
+                body { margin: 0; padding: 10px; }
+                @page { margin: 1cm; }
+              }
             </style>
           </head>
           <body>
@@ -407,26 +411,45 @@ export const ArbreGenealogiqueScreen = ({ navigation }) => {
         </html>
       `;
 
-      // Générer le PDF
-      const { uri } = await Print.printToFileAsync({ html });
+      // Sur web, utiliser window.print()
+      if (Platform.OS === 'web') {
+        // Ouvrir dans une nouvelle fenêtre et imprimer
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(html);
+          printWindow.document.close();
+          printWindow.focus();
+
+          // Attendre que le contenu soit chargé avant d'imprimer
+          printWindow.onload = () => {
+            printWindow.print();
+          };
+
+          alert('La fenêtre d\'impression s\'est ouverte. Vous pouvez sauvegarder en PDF depuis la boîte de dialogue d\'impression.');
+        } else {
+          alert('Impossible d\'ouvrir la fenêtre d\'impression. Veuillez autoriser les popups pour ce site.');
+        }
+        return;
+      }
+
+      // Sur mobile, utiliser expo-print
+      const result = await Print.printToFileAsync({ html });
+
+      if (!result || !result.uri) {
+        throw new Error('Échec de la génération du PDF');
+      }
 
       // Partager le PDF
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
+        await Sharing.shareAsync(result.uri, {
           mimeType: 'application/pdf',
           dialogTitle: 'Arbre Généalogique',
           UTI: 'com.adobe.pdf'
         });
 
-        if (Platform.OS !== 'web') {
-          Alert.alert('Succès', 'L\'arbre généalogique a été exporté en PDF');
-        }
+        Alert.alert('Succès', 'L\'arbre généalogique a été exporté en PDF');
       } else {
-        if (Platform.OS === 'web') {
-          alert('Le partage n\'est pas disponible sur cette plateforme');
-        } else {
-          Alert.alert('Erreur', 'Le partage n\'est pas disponible sur cet appareil');
-        }
+        Alert.alert('Erreur', 'Le partage n\'est pas disponible sur cet appareil');
       }
     } catch (error) {
       console.error('Erreur export PDF:', error);
