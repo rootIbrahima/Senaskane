@@ -266,4 +266,171 @@ router.put('/change-password', authenticateToken, async (req, res) => {
     }
 });
 
+/**
+ * POST /auth/code-famille
+ * Connexion avec code d'accès famille (pas besoin de compte individuel)
+ */
+router.post('/code-famille', [
+    body('codeAcces').notEmpty().withMessage('Le code d\'accès est requis')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const { codeAcces } = req.body;
+
+        // Rechercher la famille par code d'accès
+        const [familles] = await db.execute(
+            'SELECT id, nom_famille as nom, code_acces FROM famille WHERE code_acces = ?',
+            [codeAcces.toUpperCase()]
+        );
+
+        if (familles.length === 0) {
+            return res.status(401).json({ error: 'Code d\'accès invalide' });
+        }
+
+        const famille = familles[0];
+
+        // Générer un token JWT pour accéder à la famille
+        // Pas d'userId car pas de compte individuel, juste l'accès à la famille
+        const token = jwt.sign(
+            {
+                familleId: famille.id,
+                familleName: famille.nom,
+                authMethod: 'code_famille'  // Indicateur que c'est une connexion par code
+            },
+            process.env.JWT_SECRET || 'secret_key',
+            { expiresIn: '30d' }  // Token valide 30 jours
+        );
+
+        res.json({
+            token,
+            famille: {
+                id: famille.id,
+                nom: famille.nom
+            }
+        });
+
+    } catch (error) {
+        console.error('Erreur connexion par code famille:', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
+    }
+});
+
+/**
+ * POST /auth/generer-code/:familleId
+ * Générer ou régénérer un code d'accès pour une famille (admin only)
+ */
+router.post('/generer-code/:familleId', authenticateToken, async (req, res) => {
+    try {
+        const { familleId } = req.params;
+
+        // Générer un code unique
+        function genererCodeAcces() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = '';
+            for (let i = 0; i < 8; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+
+        let codeUnique = false;
+        let code = '';
+
+        // Générer jusqu'à avoir un code unique
+        while (!codeUnique) {
+            code = genererCodeAcces();
+            const [existing] = await db.execute(
+                'SELECT id FROM famille WHERE code_acces = ?',
+                [code]
+            );
+            if (existing.length === 0) {
+                codeUnique = true;
+            }
+        }
+
+        // Mettre à jour le code de la famille
+        await db.execute(
+            'UPDATE famille SET code_acces = ? WHERE id = ?',
+            [code, familleId]
+        );
+
+        res.json({
+            code,
+            message: 'Code d\'accès généré avec succès'
+        });
+
+    } catch (error) {
+        console.error('Erreur génération code:', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
+    }
+});
+
+/**
+ * GET /auth/mon-code
+ * Récupérer le code d'accès de ma famille
+ */
+router.get('/mon-code', authenticateToken, async (req, res) => {
+    try {
+        const familleId = req.user.familleId;
+
+        const [familles] = await db.execute(
+            'SELECT code_acces, nom_famille FROM famille WHERE id = ?',
+            [familleId]
+        );
+
+        if (familles.length === 0) {
+            return res.status(404).json({ error: 'Famille non trouvée' });
+        }
+
+        const famille = familles[0];
+
+        // Si pas de code, en générer un
+        if (!famille.code_acces) {
+            function genererCodeAcces() {
+                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+                let code = '';
+                for (let i = 0; i < 8; i++) {
+                    code += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                return code;
+            }
+
+            let codeUnique = false;
+            let code = '';
+
+            while (!codeUnique) {
+                code = genererCodeAcces();
+                const [existing] = await db.execute(
+                    'SELECT id FROM famille WHERE code_acces = ?',
+                    [code]
+                );
+                if (existing.length === 0) {
+                    codeUnique = true;
+                }
+            }
+
+            await db.execute(
+                'UPDATE famille SET code_acces = ? WHERE id = ?',
+                [code, familleId]
+            );
+
+            famille.code_acces = code;
+        }
+
+        res.json({
+            code: famille.code_acces,
+            nomFamille: famille.nom_famille,
+            lien: `${process.env.APP_URL || 'https://baila-genea.app'}/famille/${famille.code_acces}`
+        });
+
+    } catch (error) {
+        console.error('Erreur récupération code:', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
+    }
+});
+
 module.exports = router;
