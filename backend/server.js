@@ -14,6 +14,7 @@ if (process.env.NODE_ENV !== 'production') {
 const authRoutes = require('./routes/auth');
 const familleRoutes = require('./routes/famille');
 const membreRoutes = require('./routes/membre');
+const arbreRoutes = require('./routes/arbre');
 const ceremonieRoutes = require('./routes/ceremonie');
 const museeRoutes = require('./routes/musee');
 const rechercheRoutes = require('./routes/recherche');
@@ -42,6 +43,8 @@ const allowedOrigins = [
     'http://localhost:8081',
     'http://localhost:19006',
     'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:5174',
     'https://senaskane.onrender.com',
     'exp://localhost:8081',
 ];
@@ -56,9 +59,20 @@ const corsOptions = {
         // Permettre les requêtes sans origine (mobile apps, curl, etc.)
         if (!origin) return callback(null, true);
 
-        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+        // Permettre tous les localhost (développement local)
+        if (origin && (origin.startsWith('http://localhost:') || origin.startsWith('file://'))) {
+            return callback(null, true);
+        }
+
+        // En développement, permettre toutes les origines
+        if (process.env.NODE_ENV === 'development') {
+            return callback(null, true);
+        }
+
+        if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
+            console.log('❌ CORS bloqué pour origine:', origin);
             callback(new Error('Not allowed by CORS'));
         }
     },
@@ -130,6 +144,7 @@ app.get('/', (req, res) => {
             auth: '/api/auth',
             famille: '/api/famille',
             membre: '/api/membre',
+            arbre: '/api/arbre',
             ceremonie: '/api/ceremonie',
             musee: '/api/musee',
             recherche: '/api/recherche',
@@ -142,6 +157,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/famille', familleRoutes);
 app.use('/api/membre', membreRoutes);
+app.use('/api/arbre', arbreRoutes);
 app.use('/api/ceremonie', ceremonieRoutes);
 app.use('/api/musee', museeRoutes);
 app.use('/api/recherche', rechercheRoutes);
@@ -264,6 +280,7 @@ const server = app.listen(PORT, HOST, () => {
     console.log(`   - Auth: http://localhost:${PORT}/api/auth`);
     console.log(`   - Famille: http://localhost:${PORT}/api/famille`);
     console.log(`   - Membre: http://localhost:${PORT}/api/membre`);
+    console.log(`   - Arbre: http://localhost:${PORT}/api/arbre`);
     console.log(`   - Cérémonie: http://localhost:${PORT}/api/ceremonie`);
     console.log(`   - Musée: http://localhost:${PORT}/api/musee`);
     console.log(`   - Recherche: http://localhost:${PORT}/api/recherche`);

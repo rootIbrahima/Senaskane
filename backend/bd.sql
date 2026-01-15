@@ -197,6 +197,8 @@ CREATE TABLE abonnement (
     date_fin DATE NOT NULL,
     mode_paiement ENUM('orange_money', 'wave', 'paypal', 'virement') NOT NULL,
     reference_paiement VARCHAR(100),
+
+
     statut ENUM('actif', 'expire', 'suspendu') DEFAULT 'actif',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

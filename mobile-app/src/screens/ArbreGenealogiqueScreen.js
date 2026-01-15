@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -21,7 +21,7 @@ import { Card, Loading, FamilyTreeView, Input } from '../components';
 import { useAuth } from '../contexts/AuthContext';
 import { Picker } from '@react-native-picker/picker';
 
-export const ArbreGenealogiqueScreen = ({ navigation }) => {
+export const ArbreGenealogiqueScreen = ({ navigation, route }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -31,6 +31,16 @@ export const ArbreGenealogiqueScreen = ({ navigation }) => {
   const [selectedParent, setSelectedParent] = useState(null);
   const [typeLien, setTypeLien] = useState('pere');
   const [viewMode, setViewMode] = useState('tree'); // 'list' ou 'tree'
+  const [focusMembreId, setFocusMembreId] = useState(null); // Pour l'arbre individuel
+  const [showMemberPicker, setShowMemberPicker] = useState(false);
+
+  // Handle navigation params for individual tree
+  useEffect(() => {
+    if (route.params?.focusMembreId) {
+      setFocusMembreId(route.params.focusMembreId);
+      setViewMode('tree'); // Switch to tree view when showing individual tree
+    }
+  }, [route.params?.focusMembreId]);
 
   useEffect(() => {
     loadArbre();
@@ -65,44 +75,134 @@ export const ArbreGenealogiqueScreen = ({ navigation }) => {
     loadArbre();
   };
 
-  const getParent = (membreId, typeLien) => {
+  // Memoized helper functions to prevent recalculation
+  const getParent = useCallback((membreId, typeLien) => {
     const lien = arbre.liens.find(
       l => l.enfant_id === membreId && l.type_lien === typeLien
     );
     if (!lien) return null;
     return arbre.membres.find(m => m.id === lien.parent_id);
-  };
+  }, [arbre.liens, arbre.membres]);
 
-  const getEnfants = (membreId) => {
+  const getEnfants = useCallback((membreId) => {
     const liensEnfants = arbre.liens.filter(l => l.parent_id === membreId);
     return liensEnfants.map(lien =>
       arbre.membres.find(m => m.id === lien.enfant_id)
     ).filter(Boolean);
-  };
+  }, [arbre.liens, arbre.membres]);
 
-  const getConjoint = (membre) => {
+  const getConjoint = useCallback((membre) => {
     // Chercher les enfants de ce membre
-    const enfants = getEnfants(membre.id);
+    const liensEnfants = arbre.liens.filter(l => l.parent_id === membre.id);
+    const enfants = liensEnfants.map(lien =>
+      arbre.membres.find(m => m.id === lien.enfant_id)
+    ).filter(Boolean);
+
     if (enfants.length === 0) return null;
 
     // Prendre le premier enfant et chercher l'autre parent
     const premierEnfant = enfants[0];
-    const pere = getParent(premierEnfant.id, 'pere');
-    const mere = getParent(premierEnfant.id, 'mere');
+    const lienPere = arbre.liens.find(
+      l => l.enfant_id === premierEnfant.id && l.type_lien === 'pere'
+    );
+    const lienMere = arbre.liens.find(
+      l => l.enfant_id === premierEnfant.id && l.type_lien === 'mere'
+    );
+
+    const pere = lienPere ? arbre.membres.find(m => m.id === lienPere.parent_id) : null;
+    const mere = lienMere ? arbre.membres.find(m => m.id === lienMere.parent_id) : null;
 
     // Retourner l'autre parent (le conjoint)
     if (membre.sexe === 'M' && mere) return mere;
     if (membre.sexe === 'F' && pere) return pere;
     return null;
-  };
+  }, [arbre.liens, arbre.membres]);
 
-  // Trouver les racines de l'arbre (membres sans parents)
-  const getRootMembers = () => {
+  // Fonction pour obtenir l'arbre individuel d'un membre
+  const getIndividualTree = useCallback((membreId) => {
+    // Validation des données
+    if (!arbre || !arbre.membres || !arbre.liens) {
+      return { membres: [], liens: [], mariages: [] };
+    }
+
+    if (!membreId) return { membres: arbre.membres, liens: arbre.liens, mariages: arbre.mariages || [] };
+
+    const includedMembres = new Set();
+    const includedLiens = [];
+    let recursionCount = 0;
+    const MAX_RECURSION = 200; // Limite de sécurité globale
+
+    // Fonction récursive pour remonter les ancêtres avec protection renforcée
+    const addAncestors = (id, depth = 0) => {
+      recursionCount++;
+      if (recursionCount > MAX_RECURSION) return; // Protection globale
+      if (depth > 5) return; // Max 5 générations d'ancêtres
+      if (includedMembres.has(id)) return; // Éviter les cycles AVANT d'ajouter
+      if (!id) return; // Validation ID
+
+      includedMembres.add(id);
+
+      (arbre.liens || []).forEach(lien => {
+        if (lien && lien.enfant_id === id && lien.parent_id && lien.parent_id !== id) {
+          if (!includedLiens.some(l => l.id === lien.id)) {
+            includedLiens.push(lien);
+          }
+          addAncestors(lien.parent_id, depth + 1);
+        }
+      });
+    };
+
+    // Fonction récursive pour descendre les descendants avec protection renforcée
+    const addDescendants = (id, depth = 0) => {
+      recursionCount++;
+      if (recursionCount > MAX_RECURSION) return; // Protection globale
+      if (depth > 3) return; // Max 3 générations de descendants
+      if (includedMembres.has(id) && depth > 0) return; // Éviter les cycles après premier niveau
+      if (!id) return; // Validation ID
+
+      if (depth === 0) includedMembres.add(id); // N'ajouter qu'au premier niveau
+
+      (arbre.liens || []).forEach(lien => {
+        if (lien && lien.parent_id === id && lien.enfant_id && lien.enfant_id !== id) {
+          if (!includedLiens.some(l => l.id === lien.id)) {
+            includedLiens.push(lien);
+          }
+          addDescendants(lien.enfant_id, depth + 1);
+        }
+      });
+    };
+
+    // Ajouter ancêtres et descendants de la personne principale
+    try {
+      addAncestors(membreId, 0);
+      recursionCount = 0; // Reset pour descendants
+      addDescendants(membreId, 0);
+    } catch (error) {
+      console.error('Erreur getIndividualTree:', error);
+      return { membres: [], liens: [], mariages: [] };
+    }
+
+    // Filtrer les membres et liens
+    const filteredMembres = (arbre.membres || []).filter(m => m && m.id && includedMembres.has(m.id));
+
+    return {
+      membres: filteredMembres,
+      liens: includedLiens,
+      mariages: arbre.mariages || []
+    };
+  }, [arbre]);
+
+  // Trouver les racines de l'arbre (membres sans parents) - Memoized
+  const rootMembers = useMemo(() => {
+    if (!arbre || !arbre.membres || !Array.isArray(arbre.membres)) {
+      return [];
+    }
     return arbre.membres.filter(membre => {
-      const hasParents = arbre.liens.some(lien => lien.enfant_id === membre.id);
+      if (!membre || !membre.id) return false;
+      const hasParents = (arbre.liens || []).some(lien => lien && lien.enfant_id === membre.id);
       return !hasParents;
     });
-  };
+  }, [arbre]);
 
   const openAddLienModal = (membre) => {
     setSelectedEnfant(membre);
@@ -190,108 +290,302 @@ export const ArbreGenealogiqueScreen = ({ navigation }) => {
   // Générer et exporter le PDF de l'arbre généalogique
   const exportToPDF = async () => {
     try {
-      // Organiser les membres par génération
+      // Validation et limitation des membres
+      if (!arbre.membres || !Array.isArray(arbre.membres) || arbre.membres.length === 0) {
+        Alert.alert('Erreur', 'Aucun membre à exporter');
+        return;
+      }
+
+      const MAX_MEMBERS = 100; // 100 membres pour couvrir plusieurs générations
+      let membresForPDF = arbre.membres;
+      if (membresForPDF.length > MAX_MEMBERS) {
+        Alert.alert(
+          'Arbre volumineux',
+          `L'arbre contient ${membresForPDF.length} membres. Seuls les ${MAX_MEMBERS} premiers seront exportés dans le PDF.`,
+          [{ text: 'OK' }]
+        );
+        membresForPDF = membresForPDF.slice(0, MAX_MEMBERS);
+      }
+
+      // Éliminer les doublons
+      const uniqueMembres = [];
+      const seenIds = new Set();
+      membresForPDF.forEach(m => {
+        if (m && m.id && !seenIds.has(m.id)) {
+          seenIds.add(m.id);
+          uniqueMembres.push(m);
+        }
+      });
+      membresForPDF = uniqueMembres;
+
+      // Valider et nettoyer les liens
+      const validLiens = (arbre.liens || []).filter(lien =>
+        lien &&
+        lien.enfant_id &&
+        lien.parent_id &&
+        lien.enfant_id !== lien.parent_id
+      );
+
+      // Valider et nettoyer les mariages
+      const validMariages = (arbre.mariages || []).filter(mariage =>
+        mariage &&
+        mariage.conjoint1_id &&
+        mariage.conjoint2_id &&
+        mariage.conjoint1_id !== mariage.conjoint2_id
+      );
+
+      // Utiliser la même logique de layout que FamilyTreeView
       const membreMap = {};
-      arbre.membres.forEach(m => {
+      membresForPDF.forEach(m => {
         membreMap[m.id] = { ...m, children: [], parents: [], spouse: null };
       });
 
-      arbre.liens.forEach(lien => {
+      // Ajouter les relations parent-enfant
+      validLiens.forEach(lien => {
         if (membreMap[lien.enfant_id] && membreMap[lien.parent_id]) {
-          membreMap[lien.enfant_id].parents.push(lien.parent_id);
-          membreMap[lien.parent_id].children.push(lien.enfant_id);
+          membreMap[lien.enfant_id].parents.push({
+            id: lien.parent_id,
+            type: lien.type_lien
+          });
+          if (!membreMap[lien.parent_id].children.includes(lien.enfant_id)) {
+            membreMap[lien.parent_id].children.push(lien.enfant_id);
+          }
         }
       });
 
-      // Ajouter les informations de mariage
-      arbre.mariages?.forEach(mariage => {
+      // Ajouter les relations de mariage
+      validMariages.forEach(mariage => {
         if (membreMap[mariage.conjoint1_id] && membreMap[mariage.conjoint2_id]) {
           membreMap[mariage.conjoint1_id].spouse = mariage.conjoint2_id;
           membreMap[mariage.conjoint2_id].spouse = mariage.conjoint1_id;
         }
       });
 
-      // Trouver les racines
-      const roots = arbre.membres.filter(m => membreMap[m.id].parents.length === 0);
+      // Trouver les racines (personnes sans parents)
+      const roots = membresForPDF.filter(m => membreMap[m.id] && membreMap[m.id].parents.length === 0);
 
-      // Fonction pour construire une carte de personne
-      const buildPersonCard = (membre) => {
+      if (roots.length === 0 && membresForPDF.length > 0) {
+        roots.push(membresForPDF[0]);
+      }
+
+      // Calculer les positions des nœuds (même logique que FamilyTreeView)
+      const NODE_WIDTH = 160;
+      const NODE_HEIGHT = 120;
+      const HORIZONTAL_SPACING = 50;
+      const VERTICAL_SPACING = 90;
+
+      const positions = {};
+      const connections = [];
+      const processedSpouses = new Set();
+
+      // Calculer la largeur de sous-arbre pour chaque nœud (bottom-up) avec mémoïsation
+      const subtreeWidthCache = {};
+      const calculateSubtreeWidth = (membreId) => {
+        // Utiliser le cache pour éviter les recalculs
+        if (subtreeWidthCache[membreId] !== undefined) {
+          return subtreeWidthCache[membreId];
+        }
+
+        const membre = membreMap[membreId];
+        if (!membre) {
+          subtreeWidthCache[membreId] = NODE_WIDTH;
+          return NODE_WIDTH;
+        }
+
+        if (!membre.children || membre.children.length === 0) {
+          if (membre.spouse && membreMap[membre.spouse]) {
+            subtreeWidthCache[membreId] = (NODE_WIDTH * 2) + 20;
+            return (NODE_WIDTH * 2) + 20;
+          }
+          subtreeWidthCache[membreId] = NODE_WIDTH;
+          return NODE_WIDTH;
+        }
+
+        let childrenWidth = 0;
+        membre.children.forEach((childId, index) => {
+          if (membreMap[childId]) {
+            childrenWidth += calculateSubtreeWidth(childId);
+            if (index < membre.children.length - 1) {
+              childrenWidth += HORIZONTAL_SPACING;
+            }
+          }
+        });
+
+        const parentWidth = membre.spouse && membreMap[membre.spouse] ? (NODE_WIDTH * 2) + 20 : NODE_WIDTH;
+        const width = Math.max(parentWidth, childrenWidth);
+        subtreeWidthCache[membreId] = width;
+        return width;
+      };
+
+      // Positionner les nœuds récursivement (top-down)
+      let maxX = 0;
+      const positioned = new Set();
+      let positionCallCount = 0;
+      const MAX_POSITION_CALLS = 150; // Limite pour 100 membres sur plusieurs générations
+      const MAX_DEPTH_PER_NODE = 10; // Profondeur max pour couvrir plusieurs générations
+      const globalVisited = new Set(); // Visited set global pour tous les appels
+
+      const positionNode = (membreId, startX, y, depth = 0) => {
+        // Protection contre trop d'appels
+        positionCallCount++;
+        if (positionCallCount > MAX_POSITION_CALLS) {
+          return startX;
+        }
+
+        // Protection contre profondeur excessive
+        if (depth > MAX_DEPTH_PER_NODE) {
+          return startX;
+        }
+
+        if (globalVisited.has(membreId) || positioned.has(membreId)) return startX;
+        globalVisited.add(membreId);
+
+        const membre = membreMap[membreId];
+        if (!membre) return startX;
+
+        const subtreeWidth = calculateSubtreeWidth(membreId);
+        const hasSpouse = membre.spouse && membreMap[membre.spouse] && !positioned.has(membre.spouse);
+        const parentWidth = hasSpouse ? (NODE_WIDTH * 2) + 20 : NODE_WIDTH;
+
+        let nodeX = startX;
+        if (membre.children && membre.children.length > 0) {
+          const childrenWidth = membre.children.reduce((total, childId, index) => {
+            if (membreMap[childId]) {
+              total += calculateSubtreeWidth(childId);
+              if (index < membre.children.length - 1) {
+                total += HORIZONTAL_SPACING;
+              }
+            }
+            return total;
+          }, 0);
+
+          nodeX = startX + (childrenWidth - parentWidth) / 2;
+        }
+
+        positions[membreId] = {
+          x: Math.max(40, nodeX),
+          y: y,
+          membre: membre
+        };
+        positioned.add(membreId);
+
+        let currentX = nodeX + NODE_WIDTH + 20;
+
+        if (hasSpouse) {
+          positions[membre.spouse] = {
+            x: currentX,
+            y: y,
+            membre: membreMap[membre.spouse]
+          };
+          positioned.add(membre.spouse);
+          processedSpouses.add(membre.spouse);
+
+          connections.push({
+            type: 'marriage',
+            from: positions[membreId],
+            to: positions[membre.spouse]
+          });
+        }
+
+        if (membre.children && membre.children.length > 0) {
+          let childX = startX;
+          const childY = y + NODE_HEIGHT + VERTICAL_SPACING;
+
+          membre.children.forEach((childId, index) => {
+            if (membreMap[childId] && !positioned.has(childId)) {
+              positionNode(childId, childX, childY, depth + 1);
+              childX += calculateSubtreeWidth(childId);
+              if (index < membre.children.length - 1) {
+                childX += HORIZONTAL_SPACING;
+              }
+            }
+          });
+        }
+
+        maxX = Math.max(maxX, startX + subtreeWidth);
+        return startX + subtreeWidth + HORIZONTAL_SPACING;
+      };
+
+      // Positionner à partir des racines (limité à MAX_ROOTS)
+      const MAX_ROOTS = 5; // Max 5 racines
+      let currentRootX = 40;
+      const rootsToProcess = roots.slice(0, MAX_ROOTS);
+      rootsToProcess.forEach(root => {
+        if (root && root.id && !positioned.has(root.id)) {
+          const rootWidth = calculateSubtreeWidth(root.id);
+          positionNode(root.id, currentRootX, 40);
+          currentRootX += rootWidth + HORIZONTAL_SPACING * 2;
+        }
+      });
+
+      // Créer les connexions parent-enfant (avec limite)
+      const MAX_CONNECTIONS = 100; // Limite de connexions pour éviter surcharge
+      validLiens.forEach(lien => {
+        if (connections.length >= MAX_CONNECTIONS) return; // Stop si limite atteinte
+        if (positions[lien.parent_id] && positions[lien.enfant_id]) {
+          connections.push({
+            type: 'parent',
+            from: positions[lien.parent_id],
+            to: positions[lien.enfant_id],
+            linkType: lien.type_lien
+          });
+        }
+      });
+
+      const maxY = Math.max(...Object.values(positions).map(p => p.y)) + NODE_HEIGHT + 40;
+      const totalWidth = maxX + 40;
+
+      // Construire les cartes de personnes avec positions absolues
+      let nodesHTML = '';
+      Object.values(positions).forEach(node => {
+        const membre = node.membre;
         const sexeIcon = membre.sexe === 'M' ? '♂' : '♀';
         const sexeColor = membre.sexe === 'M' ? '#2196F3' : '#E91E63';
 
-        return `
-          <div class="person-card" style="border-color: ${sexeColor};">
+        nodesHTML += `
+          <div class="person-card" style="left: ${node.x}px; top: ${node.y}px; border-color: ${sexeColor};">
             <div class="person-icon" style="background-color: ${sexeColor};">
               ${sexeIcon}
             </div>
             <div class="person-name">${membre.prenom} ${membre.nom}</div>
-            ${membre.dateNaissance ? `<div class="person-info">Né(e): ${membre.dateNaissance}</div>` : ''}
-            ${membre.profession ? `<div class="person-info">${membre.profession}</div>` : ''}
+            ${membre.date_naissance ? `<div class="person-info">${membre.date_naissance.substring(0, 4)}</div>` : ''}
           </div>
         `;
-      };
-
-      // Fonction pour construire l'arbre HTML avec structure visuelle
-      const buildTreeHTML = (membreId, visited = new Set()) => {
-        if (visited.has(membreId)) return '';
-        visited.add(membreId);
-
-        const membre = membreMap[membreId];
-        if (!membre) return '';
-
-        // Vérifier si ce membre a un conjoint
-        const spouse = membre.spouse ? membreMap[membre.spouse] : null;
-        if (spouse && visited.has(spouse.id)) return ''; // Éviter les doublons
-
-        // Récupérer les enfants uniques (pas de doublon même si deux parents)
-        let childrenIds = new Set(membre.children || []);
-        if (spouse) {
-          visited.add(spouse.id);
-          (spouse.children || []).forEach(childId => childrenIds.add(childId));
-        }
-        const children = Array.from(childrenIds).map(id => membreMap[id]).filter(Boolean);
-
-        let html = '<div class="tree-node">';
-
-        // Couple ou personne seule
-        html += '<div class="couple-container">';
-        if (spouse) {
-          html += '<div class="couple">';
-          html += buildPersonCard(membre);
-          html += '<div class="marriage-line"></div>';
-          html += buildPersonCard(spouse);
-          html += '</div>';
-        } else {
-          html += buildPersonCard(membre);
-        }
-        html += '</div>';
-
-        // Si des enfants existent, ajouter la ligne verticale et les enfants
-        if (children.length > 0) {
-          html += '<div class="vertical-line"></div>';
-          html += '<div class="horizontal-line"></div>';
-          html += '<div class="children-container">';
-
-          children.forEach((child, index) => {
-            html += '<div class="child-wrapper">';
-            html += '<div class="child-connector"></div>';
-            html += buildTreeHTML(child.id, visited);
-            html += '</div>';
-          });
-
-          html += '</div>';
-        }
-
-        html += '</div>';
-        return html;
-      };
-
-      // Construire le HTML complet
-      let treeHTML = '<div class="tree-container">';
-      roots.forEach(root => {
-        treeHTML += buildTreeHTML(root.id);
       });
-      treeHTML += '</div>';
+
+      // Construire les connexions SVG
+      let connectionsHTML = '';
+      connections.forEach((conn, index) => {
+        if (conn.type === 'marriage') {
+          const y = conn.from.y + NODE_HEIGHT / 2;
+          connectionsHTML += `
+            <line x1="${conn.from.x + NODE_WIDTH}" y1="${y}"
+                  x2="${conn.to.x}" y2="${y}"
+                  stroke="#dc2626" stroke-width="3" stroke-dasharray="5,5"/>
+          `;
+        } else if (conn.type === 'parent') {
+          const startX = conn.from.x + NODE_WIDTH / 2;
+          const startY = conn.from.y + NODE_HEIGHT;
+          const endX = conn.to.x + NODE_WIDTH / 2;
+          const endY = conn.to.y;
+          const midY = (startY + endY) / 2;
+
+          const color = conn.linkType === 'pere' ? '#2196F3' : '#E91E63';
+          connectionsHTML += `
+            <path d="M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY}"
+                  stroke="${color}" stroke-width="2" fill="none"/>
+          `;
+        }
+      });
+
+      const treeHTML = `
+        <div class="tree-container" style="width: ${totalWidth}px; height: ${maxY}px;">
+          <svg width="${totalWidth}" height="${maxY}" style="position: absolute; top: 0; left: 0;">
+            ${connectionsHTML}
+          </svg>
+          ${nodesHTML}
+        </div>
+      `;
 
       const html = `
         <!DOCTYPE html>
@@ -308,79 +602,56 @@ export const ArbreGenealogiqueScreen = ({ navigation }) => {
 
               body {
                 font-family: 'Helvetica', 'Arial', sans-serif;
-                padding: 20px;
-                background-color: white;
+                padding: 15px;
+                background-color: #f8f9fa;
                 overflow-x: auto;
               }
 
               h1 {
-                color: #1e3a8a;
+                color: #2E7D32;
                 text-align: center;
-                margin-bottom: 20px;
-                border-bottom: 3px solid #1e3a8a;
-                padding-bottom: 10px;
-                font-size: 24px;
+                margin-bottom: 15px;
+                border-bottom: 3px solid #2E7D32;
+                padding-bottom: 8px;
+                font-size: 22px;
               }
 
               .info {
                 text-align: center;
                 color: #666;
-                margin-bottom: 30px;
-                font-size: 11px;
+                margin-bottom: 25px;
+                font-size: 10px;
               }
 
               .tree-container {
-                display: flex;
-                justify-content: center;
+                position: relative;
+                background-color: white;
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
                 padding: 20px;
                 min-width: fit-content;
               }
 
-              .tree-node {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                position: relative;
-                padding: 0 10px;
-              }
-
-              .couple-container {
-                margin-bottom: 20px;
-              }
-
-              .couple {
-                display: flex;
-                align-items: center;
-                gap: 20px;
-                position: relative;
-              }
-
-              .marriage-line {
-                width: 20px;
-                height: 2px;
-                background-color: #1e3a8a;
-                position: relative;
-              }
-
               .person-card {
+                position: absolute;
                 background: white;
-                border: 2px solid;
-                border-radius: 8px;
-                padding: 10px;
-                min-width: 140px;
+                border: 3px solid;
+                border-radius: 12px;
+                padding: 12px;
+                width: 160px;
                 text-align: center;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                box-shadow: 0 2px 6px rgba(0,0,0,0.15);
                 page-break-inside: avoid;
               }
 
               .person-icon {
-                width: 30px;
-                height: 30px;
+                width: 28px;
+                height: 28px;
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                margin: 0 auto 8px;
+                margin: 0 auto 6px;
                 color: white;
                 font-size: 16px;
                 font-weight: bold;
@@ -388,67 +659,46 @@ export const ArbreGenealogiqueScreen = ({ navigation }) => {
 
               .person-name {
                 font-weight: bold;
-                font-size: 12px;
+                font-size: 13px;
                 color: #333;
                 margin-bottom: 4px;
                 word-wrap: break-word;
+                line-height: 1.3;
               }
 
               .person-info {
-                font-size: 9px;
-                color: #666;
-                margin-top: 2px;
-              }
-
-              .vertical-line {
-                width: 2px;
-                height: 30px;
-                background-color: #1e3a8a;
-                margin: 0 auto;
-              }
-
-              .horizontal-line {
-                height: 2px;
-                background-color: #1e3a8a;
-                position: absolute;
-                top: 30px;
-                left: 0;
-                right: 0;
-              }
-
-              .children-container {
-                display: flex;
-                gap: 30px;
-                position: relative;
-                margin-top: 30px;
-              }
-
-              .child-wrapper {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                position: relative;
-              }
-
-              .child-connector {
-                width: 2px;
-                height: 30px;
-                background-color: #1e3a8a;
-                margin-bottom: 0;
+                font-size: 10px;
+                color: #2E7D32;
+                margin-top: 4px;
+                font-weight: 600;
               }
 
               @media print {
                 body {
                   margin: 0;
                   padding: 10px;
+                  background-color: white;
                 }
                 @page {
                   size: landscape;
-                  margin: 1cm;
+                  margin: 0.8cm;
+                }
+                h1 {
+                  font-size: 20px;
+                  margin-bottom: 10px;
+                  padding-bottom: 6px;
+                }
+                .info {
+                  margin-bottom: 15px;
+                  font-size: 9px;
                 }
                 .tree-container {
-                  transform: scale(0.95);
-                  transform-origin: top left;
+                  border: none;
+                  padding: 10px;
+                }
+                .person-card {
+                  border-width: 2px;
+                  padding: 10px;
                 }
               }
             </style>
@@ -677,11 +927,14 @@ export const ArbreGenealogiqueScreen = ({ navigation }) => {
       );
     }
 
+    // Utiliser l'arbre filtré si un membre est sélectionné
+    const treeData = focusMembreId ? getIndividualTree(focusMembreId) : arbre;
+
     return (
       <FamilyTreeView
-        membres={arbre.membres}
-        liens={arbre.liens}
-        mariages={arbre.mariages || []}
+        membres={treeData.membres}
+        liens={treeData.liens}
+        mariages={treeData.mariages || []}
         onNodePress={(membre) => navigation.navigate('MembreDetail', { membre })}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -803,10 +1056,32 @@ export const ArbreGenealogiqueScreen = ({ navigation }) => {
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Arbre Généalogique</Text>
-          <Text style={styles.headerSubtitle}>
-            {arbre.membres.length} membres • {arbre.liens.length} liens • {arbre.mariages?.length || 0} mariages
-          </Text>
+          {focusMembreId ? (
+            <Text style={styles.headerSubtitle}>
+              Arbre individuel • {arbre.membres.find(m => m.id === focusMembreId)?.prenom}
+            </Text>
+          ) : (
+            <Text style={styles.headerSubtitle}>
+              {arbre.membres.length} membres • {arbre.liens.length} liens parentaux
+            </Text>
+          )}
         </View>
+
+        <TouchableOpacity
+          style={[styles.iconButton, focusMembreId && styles.iconButtonActive]}
+          onPress={() => setShowMemberPicker(true)}
+        >
+          <Ionicons name="person-outline" size={20} color={focusMembreId ? COLORS.white : COLORS.primary} />
+        </TouchableOpacity>
+
+        {focusMembreId && (
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => setFocusMembreId(null)}
+          >
+            <Ionicons name="close-circle-outline" size={20} color={COLORS.error} />
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={styles.pdfButton}
@@ -936,6 +1211,57 @@ export const ArbreGenealogiqueScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+
+      {/* Modal pour sélectionner un membre pour l'arbre individuel */}
+      <Modal
+        visible={showMemberPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowMemberPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Arbre individuel</Text>
+            <Text style={styles.modalSubtitle}>
+              Sélectionnez un membre pour voir son arbre (ancêtres et descendants)
+            </Text>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Membre</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={focusMembreId}
+                  onValueChange={(value) => {
+                    setFocusMembreId(value);
+                    setShowMemberPicker(false);
+                  }}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="-- Arbre complet --" value={null} />
+                  {arbre.membres
+                    .sort((a, b) => `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`))
+                    .map(membre => (
+                      <Picker.Item
+                        key={membre.id}
+                        label={`${membre.prenom} ${membre.nom}`}
+                        value={membre.id}
+                      />
+                    ))}
+                </Picker>
+              </View>
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonSecondary]}
+                onPress={() => setShowMemberPicker(false)}
+              >
+                <Text style={styles.modalButtonSecondaryText}>Annuler</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -963,6 +1289,21 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
     marginTop: SPACING.xs,
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: SPACING.xs,
+  },
+  iconButtonActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   viewToggle: {
     flexDirection: 'row',

@@ -126,6 +126,103 @@ export const LienParenteScreen = ({ route, navigation }) => {
     </Card>
   );
 
+  // Rendu d'une personne dans le mini-arbre
+  const renderPersonNode = (membre, isAncetre = false) => {
+    const borderColor = membre.sexe === 'M' ? COLORS.info : COLORS.error;
+    const bgColor = membre.sexe === 'M' ? COLORS.info : COLORS.error;
+
+    return (
+      <View style={[
+        styles.personNode,
+        isAncetre && styles.personNodeAncetre,
+        { borderColor }
+      ]}>
+        <View style={[styles.personNodeIcon, { backgroundColor: bgColor }]}>
+          <Ionicons
+            name={membre.sexe === 'M' ? 'male' : 'female'}
+            size={16}
+            color={COLORS.white}
+          />
+        </View>
+        <Text style={styles.personNodeName} numberOfLines={2}>
+          {membre.prenom} {membre.nom}
+        </Text>
+        <Text style={styles.personNodeNumero} numberOfLines={1}>
+          {membre.numero}
+        </Text>
+      </View>
+    );
+  };
+
+  // Rendu d'une ligne verticale
+  const renderVerticalLine = (height = 30) => (
+    <View style={[styles.verticalLine, { height }]} />
+  );
+
+  // Rendu d'une ligne horizontale
+  const renderHorizontalLine = (width = 100) => (
+    <View style={[styles.horizontalLine, { width }]} />
+  );
+
+  // Rendu du mini-organigramme
+  const renderMiniOrganigramme = () => {
+    if (!result.chemin1 || !result.chemin2) return null;
+
+    // Inverser les chemins pour afficher de l'ancêtre vers les descendants
+    const chemin1Reverse = [...result.chemin1].reverse();
+    const chemin2Reverse = [...result.chemin2].reverse();
+
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.organigrammeScroll}
+      >
+        <View style={styles.organigrammeContainer}>
+          {/* Ancêtre commun en haut */}
+          <View style={styles.organigrammeRow}>
+            {renderPersonNode(chemin1Reverse[0], true)}
+          </View>
+
+          {chemin1Reverse.length > 1 || chemin2Reverse.length > 1 ? (
+            <>
+              {/* Ligne depuis l'ancêtre */}
+              {renderVerticalLine(30)}
+
+              {/* Point de division */}
+              <View style={styles.divisionPoint}>
+                {renderHorizontalLine(200)}
+              </View>
+
+              {/* Deux branches */}
+              <View style={styles.branchesContainer}>
+                {/* Branche 1 (gauche) */}
+                <View style={styles.branchColumn}>
+                  {chemin1Reverse.slice(1).map((membre, index) => (
+                    <View key={`chemin1-${membre.id}`} style={styles.branchNode}>
+                      {renderVerticalLine(30)}
+                      {renderPersonNode(membre)}
+                    </View>
+                  ))}
+                </View>
+
+                {/* Branche 2 (droite) */}
+                <View style={styles.branchColumn}>
+                  {chemin2Reverse.slice(1).map((membre, index) => (
+                    <View key={`chemin2-${membre.id}`} style={styles.branchNode}>
+                      {renderVerticalLine(30)}
+                      {renderPersonNode(membre)}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </>
+          ) : null}
+        </View>
+      </ScrollView>
+    );
+  };
+
   const renderResultCard = () => {
     if (!result) return null;
 
@@ -153,17 +250,21 @@ export const LienParenteScreen = ({ route, navigation }) => {
 
           {result.ancetreCommun && (
             <View style={styles.ancestorSection}>
-              <Text style={styles.ancestorTitle}>Ancêtre commun :</Text>
-              <View style={styles.ancestorCard}>
-                <Text style={styles.ancestorName}>
-                  {result.ancetreCommun.prenom} {result.ancetreCommun.nom}
-                </Text>
-                <Text style={styles.ancestorNumero}>
-                  {result.ancetreCommun.numero}
-                </Text>
-              </View>
+              <Text style={styles.ancestorTitle}>
+                🎯 Point de rencontre : {result.ancetreCommun.prenom} {result.ancetreCommun.nom}
+              </Text>
             </View>
           )}
+
+          {/* Mini-organigramme visuel */}
+          <View style={styles.organigrammeSection}>
+            <View style={styles.cheminsSeparator}>
+              <View style={styles.separatorLine} />
+              <Text style={styles.separatorText}>Mini-organigramme</Text>
+              <View style={styles.separatorLine} />
+            </View>
+            {renderMiniOrganigramme()}
+          </View>
         </View>
       </Card>
     );
@@ -355,12 +456,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
   },
-  ancestorSection: { marginTop: SPACING.sm },
+  ancestorSection: {
+    marginTop: SPACING.md,
+    padding: SPACING.md,
+    backgroundColor: COLORS.success + '15',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: COLORS.success + '30',
+  },
   ancestorTitle: {
-    fontSize: FONT_SIZES.md,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: SPACING.sm,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '700',
+    color: COLORS.success,
+    textAlign: 'center',
   },
   ancestorCard: {
     padding: SPACING.md,
@@ -378,6 +486,102 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     color: COLORS.primary,
     marginTop: SPACING.xs,
+  },
+  // Styles pour le mini-organigramme
+  organigrammeSection: {
+    marginTop: SPACING.lg,
+  },
+  cheminsSeparator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  separatorText: {
+    marginHorizontal: SPACING.md,
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  organigrammeScroll: {
+    maxHeight: 500,
+  },
+  organigrammeContainer: {
+    padding: SPACING.lg,
+    alignItems: 'center',
+    minWidth: '100%',
+  },
+  organigrammeRow: {
+    alignItems: 'center',
+  },
+  personNode: {
+    width: 120,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: SPACING.sm,
+    borderWidth: 3,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  personNodeAncetre: {
+    borderWidth: 4,
+    backgroundColor: COLORS.success + '10',
+    shadowColor: COLORS.success,
+    shadowOpacity: 0.3,
+  },
+  personNodeIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.xs,
+  },
+  personNodeName: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: '700',
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  personNodeNumero: {
+    fontSize: 10,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+  },
+  verticalLine: {
+    width: 3,
+    backgroundColor: COLORS.primary,
+    alignSelf: 'center',
+  },
+  horizontalLine: {
+    height: 3,
+    backgroundColor: COLORS.primary,
+  },
+  divisionPoint: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  branchesContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    gap: SPACING.xl,
+  },
+  branchColumn: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  branchNode: {
+    alignItems: 'center',
   },
   modalContainer: { flex: 1, backgroundColor: COLORS.white },
   modalHeader: {

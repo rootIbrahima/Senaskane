@@ -13,16 +13,18 @@
       },
       "distribution": "internal",
       "env": {
-        "API_URL": "http://localhost:3000/api"
+        "API_URL": "https://senaskane.onrender.com/api"
       }
     },
     "production": {
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "image": "latest"
       },
       "env": {
         "API_URL": "https://senaskane.onrender.com/api"
-      }
+      },
+      "node": "22.11.0"
     }
   },
   "submit": {

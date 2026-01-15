@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
 import { Input, Card } from '../components';
 import { rechercheApi } from '../api/rechercheApi';
@@ -11,6 +11,33 @@ export const RechercheScreen = ({ navigation }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const debounceTimeout = useRef(null);
+
+  // Auto-search with debounce when query changes
+  useEffect(() => {
+    // Clear previous timeout
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
+
+    // Only search if query has at least 2 characters
+    if (query.trim().length >= 2) {
+      setLoading(true);
+      debounceTimeout.current = setTimeout(() => {
+        handleSearch();
+      }, 500); // 500ms delay
+    } else if (query.trim().length === 0) {
+      setResults([]);
+      setLoading(false);
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+    };
+  }, [query, activeTab]);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -188,7 +215,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: SPACING.md,
     backgroundColor: COLORS.white,
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   searchInput: { flex: 1, marginRight: SPACING.sm, marginBottom: 0 },
   searchButton: {
@@ -198,7 +225,6 @@ const styles = StyleSheet.create({
     height: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 24,
   },
   listContent: { padding: SPACING.md },
   resultCard: { marginBottom: SPACING.sm },

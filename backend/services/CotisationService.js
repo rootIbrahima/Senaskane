@@ -8,14 +8,20 @@ class CotisationService {
     /**
      * Créer un compte trésorier pour une cérémonie
      */
-    static async creerTresorier(ceremonieId, familleId, nomPrenom) {
+    static async creerTresorier(ceremonieId, familleId, membreId, nomPrenom) {
         const connection = await db.getConnection();
-        
+
         try {
             await connection.beginTransaction();
 
-            // Générer un login unique
-            const loginBase = `tresorier_${ceremonieId}`;
+            // Générer un login unique basé sur le numéro d'identification du membre
+            const [membre] = await connection.execute(
+                'SELECT numero_identification FROM membre WHERE id = ?',
+                [membreId]
+            );
+
+            const numeroId = membre[0].numero_identification;
+            const loginBase = `tresorier_${numeroId}`;
             const login = `${loginBase}_${Date.now()}`;
 
             // Générer un mot de passe temporaire
@@ -24,18 +30,18 @@ class CotisationService {
 
             // Créer l'utilisateur trésorier
             const [result] = await connection.execute(
-                `INSERT INTO utilisateur 
-                (famille_id, login, mot_de_passe_hash, role, nom, est_active) 
+                `INSERT INTO utilisateur
+                (famille_id, login, mot_de_passe_hash, role, nom, est_active)
                 VALUES (?, ?, ?, 'tresorier', ?, TRUE)`,
                 [familleId, login, mdpHash, nomPrenom]
             );
 
             const tresorierUserId = result.insertId;
 
-            // Associer le trésorier à la cérémonie
+            // Associer le trésorier à la cérémonie via la table tresorier_ceremonie avec le membre_id
             await connection.execute(
-                'UPDATE ceremonie SET tresorier_id = ? WHERE id = ? AND famille_id = ?',
-                [tresorierUserId, ceremonieId, familleId]
+                'INSERT INTO tresorier_ceremonie (ceremonie_id, utilisateur_id, membre_id) VALUES (?, ?, ?)',
+                [ceremonieId, tresorierUserId, membreId]
             );
 
             await connection.commit();
@@ -43,7 +49,8 @@ class CotisationService {
             return {
                 userId: tresorierUserId,
                 login: login,
-                motDePasseTemporaire: mdpTemporaire
+                motDePasseTemporaire: mdpTemporaire,
+                membreId: membreId
             };
 
         } catch (error) {
@@ -195,7 +202,11 @@ class CotisationService {
             soldeDisponible,
             totalMembres: stats[0].total_membres,
             membresAyantCotise: stats[0].membres_ayant_cotise,
-            tauxCotisation: stats[0].total_membres > 0 
+            nombreCotisees: stats[0].membres_ayant_cotise, // Alias pour le frontend
+            tauxCotisation: stats[0].total_membres > 0
+                ? ((stats[0].membres_ayant_cotise / stats[0].total_membres) * 100).toFixed(2)
+                : 0,
+            tauxCollecte: stats[0].total_membres > 0 // Alias pour le frontend
                 ? ((stats[0].membres_ayant_cotise / stats[0].total_membres) * 100).toFixed(2)
                 : 0
         };
@@ -240,17 +251,24 @@ class CotisationService {
             throw new Error('Le montant de cotisation doit être positif');
         }
 
-        // Enregistrer la cotisation
+        // Enregistrer la cotisation (convertir undefined en null)
         const [result] = await db.execute(
-            `UPDATE cotisation_ceremonie 
-            SET a_cotise = TRUE, 
-                date_cotisation = NOW(), 
-                mode_paiement = ?, 
+            `UPDATE cotisation_ceremonie
+            SET a_cotise = TRUE,
+                date_cotisation = NOW(),
+                mode_paiement = ?,
                 reference_paiement = ?,
                 notes = ?,
                 enregistre_par = ?
             WHERE ceremonie_id = ? AND membre_id = ?`,
-            [modePaiement, referencePaiement, notes, tresorierUserId, ceremonieId, membreId]
+            [
+                modePaiement,
+                referencePaiement || null,
+                notes || null,
+                tresorierUserId,
+                ceremonieId,
+                membreId
+            ]
         );
 
         return result.affectedRows > 0;

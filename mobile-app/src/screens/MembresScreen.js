@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import {
   View,
   Text,
@@ -51,7 +51,7 @@ export const MembresScreen = ({ navigation }) => {
     loadMembres();
   };
 
-  const renderMembre = ({ item }) => (
+  const renderMembre = useCallback(({ item }) => (
     <TouchableOpacity
       style={styles.membreCard}
       onPress={() => navigation.navigate('MembreDetail', { membre: item })}
@@ -63,6 +63,7 @@ export const MembresScreen = ({ navigation }) => {
             <Image
               source={{ uri: `${API_URL.replace('/api', '')}/uploads/photos/${item.photo}` }}
               style={styles.photo}
+              resizeMode="cover"
             />
           ) : (
             <View style={[styles.photoPlaceholder, { backgroundColor: item.sexe === 'M' ? COLORS.info : COLORS.error }]}>
@@ -96,7 +97,13 @@ export const MembresScreen = ({ navigation }) => {
         </View>
       </View>
     </TouchableOpacity>
-  );
+  ), [navigation]);
+
+  const getItemLayout = useCallback((data, index) => ({
+    length: 128, // Approximate height of each item (64px photo + padding)
+    offset: 128 * index,
+    index,
+  }), []);
 
   if (loading) {
     return <Loading text="Chargement des membres..." />;
@@ -118,6 +125,12 @@ export const MembresScreen = ({ navigation }) => {
             <Text style={styles.emptyText}>Aucun membre trouvé</Text>
           </View>
         }
+        // Performance optimizations
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={true}
+        getItemLayout={getItemLayout}
       />
       {user?.role === 'admin' && (
         <TouchableOpacity

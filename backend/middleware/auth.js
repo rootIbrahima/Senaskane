@@ -13,7 +13,9 @@ const authenticateToken = (req, res, next) => {
         return res.status(401).json({ error: 'Token d\'accès requis' });
     }
 
-    jwt.verify(token, process.env.JWT_SECRET || 'secret_key', (err, user) => {
+    const secret = process.env.JWT_SECRET || 'senaskane-super-secret-key-2026-production';
+
+    jwt.verify(token, secret, (err, user) => {
         if (err) {
             return res.status(403).json({ error: 'Token invalide ou expiré' });
         }

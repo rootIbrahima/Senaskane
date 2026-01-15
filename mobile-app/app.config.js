@@ -46,6 +46,12 @@ export default {
             enableShrinkResourcesInReleaseBuilds: false,
           }
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          photosPermission: "L'application a besoin d'accéder à vos photos pour ajouter des images de membres et d'objets du musée."
+        }
       ]
     ]
   }

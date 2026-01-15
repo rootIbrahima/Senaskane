@@ -203,13 +203,13 @@ class Membre {
 
     static async trouverLienParente(familleId, membreId1, membreId2) {
         try {
-            // Récupérer les informations de sexe des deux membres
+            // Récupérer les informations complètes des deux membres
             const [membre1Info] = await db.execute(
-                'SELECT sexe FROM membre WHERE id = ?',
+                'SELECT id, numero_identification, nom, prenom, sexe FROM membre WHERE id = ?',
                 [membreId1]
             );
             const [membre2Info] = await db.execute(
-                'SELECT sexe FROM membre WHERE id = ?',
+                'SELECT id, numero_identification, nom, prenom, sexe FROM membre WHERE id = ?',
                 [membreId2]
             );
 
@@ -225,26 +225,28 @@ class Membre {
 
             const query = `
                 WITH RECURSIVE arbre_ascendant1 AS (
-                    SELECT id, numero_identification, nom, prenom, 0 as niveau
+                    SELECT id, numero_identification, nom, prenom, 0 as niveau, CAST(id AS CHAR(1000)) as chemin
                     FROM membre WHERE id = ? AND famille_id = ?
                     UNION ALL
-                    SELECT m.id, m.numero_identification, m.nom, m.prenom, aa.niveau + 1
+                    SELECT m.id, m.numero_identification, m.nom, m.prenom, aa.niveau + 1,
+                           CONCAT(aa.chemin, ',', m.id) as chemin
                     FROM membre m
                     JOIN lien_parental lp ON m.id = lp.parent_id
                     JOIN arbre_ascendant1 aa ON lp.enfant_id = aa.id
                     WHERE aa.niveau < 10
                 ),
                 arbre_ascendant2 AS (
-                    SELECT id, numero_identification, nom, prenom, 0 as niveau
+                    SELECT id, numero_identification, nom, prenom, 0 as niveau, CAST(id AS CHAR(1000)) as chemin
                     FROM membre WHERE id = ? AND famille_id = ?
                     UNION ALL
-                    SELECT m.id, m.numero_identification, m.nom, m.prenom, aa.niveau + 1
+                    SELECT m.id, m.numero_identification, m.nom, m.prenom, aa.niveau + 1,
+                           CONCAT(aa.chemin, ',', m.id) as chemin
                     FROM membre m
                     JOIN lien_parental lp ON m.id = lp.parent_id
                     JOIN arbre_ascendant2 aa ON lp.enfant_id = aa.id
                     WHERE aa.niveau < 10
                 )
-                SELECT aa1.*, aa2.niveau as niveau2
+                SELECT aa1.*, aa2.niveau as niveau2, aa2.chemin as chemin2
                 FROM arbre_ascendant1 aa1
                 JOIN arbre_ascendant2 aa2 ON aa1.id = aa2.id
                 ORDER BY aa1.niveau + aa2.niveau
@@ -257,6 +259,43 @@ class Membre {
                 const ancetreCommun = result[0];
                 const degre = ancetreCommun.niveau + ancetreCommun.niveau2;
 
+                // Construire les chemins avec détails des membres
+                const chemin1Ids = ancetreCommun.chemin.split(',').map(id => parseInt(id));
+                const chemin2Ids = ancetreCommun.chemin2.split(',').map(id => parseInt(id));
+
+                // Récupérer les détails de tous les membres dans les chemins
+                const allIds = [...new Set([...chemin1Ids, ...chemin2Ids])];
+                const placeholders = allIds.map(() => '?').join(',');
+                const [membresDetails] = await db.execute(
+                    `SELECT id, numero_identification, nom, prenom, sexe
+                     FROM membre WHERE id IN (${placeholders})`,
+                    allIds
+                );
+
+                // Créer un map pour accéder rapidement aux détails
+                const membresMap = {};
+                membresDetails.forEach(m => {
+                    membresMap[m.id] = m;
+                });
+
+                // Construire chemin1 avec détails
+                const chemin1 = chemin1Ids.map(id => ({
+                    id: membresMap[id].id,
+                    numero: membresMap[id].numero_identification,
+                    nom: membresMap[id].nom,
+                    prenom: membresMap[id].prenom,
+                    sexe: membresMap[id].sexe
+                }));
+
+                // Construire chemin2 avec détails
+                const chemin2 = chemin2Ids.map(id => ({
+                    id: membresMap[id].id,
+                    numero: membresMap[id].numero_identification,
+                    nom: membresMap[id].nom,
+                    prenom: membresMap[id].prenom,
+                    sexe: membresMap[id].sexe
+                }));
+
                 return {
                     ancetreCommun: {
                         id: ancetreCommun.id,
@@ -265,7 +304,9 @@ class Membre {
                         prenom: ancetreCommun.prenom
                     },
                     degre: degre,
-                    description: this.decrireLienParente(ancetreCommun.niveau, ancetreCommun.niveau2, sexeMembre1, sexeMembre2)
+                    description: this.decrireLienParente(ancetreCommun.niveau, ancetreCommun.niveau2, sexeMembre1, sexeMembre2),
+                    chemin1: chemin1, // Chemin de membre1 à l'ancêtre commun
+                    chemin2: chemin2  // Chemin de membre2 à l'ancêtre commun
                 };
             }
 

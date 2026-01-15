@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
-  TouchableOpacity,
 } from 'react-native';
 import { Button, Input, ErrorMessage } from '../components';
 import { useAuth } from '../contexts/AuthContext';
@@ -112,15 +111,6 @@ export const LoginScreen = ({ navigation }) => {
             variant="outline"
             style={styles.registerButton}
           />
-
-          <TouchableOpacity
-            style={styles.activateLink}
-            onPress={() => navigation.navigate('ActivateAccount')}
-          >
-            <Text style={styles.activateLinkText}>
-              Activer un compte existant
-            </Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -212,16 +202,5 @@ const styles = StyleSheet.create({
   },
   registerButton: {
     marginTop: SPACING.sm,
-  },
-  activateLink: {
-    alignItems: 'center',
-    marginTop: SPACING.md,
-    paddingVertical: SPACING.sm,
-  },
-  activateLinkText: {
-    color: COLORS.primary,
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '500',
-    textDecorationLine: 'underline',
   },
 });

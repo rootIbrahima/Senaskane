@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, FONT_SIZES } from '../utils/config';
 import { ceremonieApi } from '../api/ceremonieApi';
@@ -31,9 +32,13 @@ export const AjouterCeremoniesScreen = ({ navigation }) => {
   const [lieu, setLieu] = useState('');
   const [membrePrincipalId, setMembrePrincipalId] = useState('');
   const [homonymeId, setHomonymeId] = useState('');
+  const [parrainId, setParrainId] = useState('');
+  const [marrainId, setMarrainId] = useState('');
+  const [belleSoeurId, setBelleSoeurId] = useState('');
   const [membres, setMembres] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
     loadMembres();
@@ -46,6 +51,20 @@ export const AjouterCeremoniesScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Erreur chargement membres:', error);
     }
+  };
+
+  const handleDateChange = (event, selectedDate) => {
+    setShowDatePicker(Platform.OS === 'ios'); // Keep picker open on iOS
+    if (selectedDate) {
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      setDateCeremonie(`${year}-${month}-${day}`);
+    }
+  };
+
+  const showDatePickerModal = () => {
+    setShowDatePicker(true);
   };
 
   const handleSubmit = async () => {
@@ -86,6 +105,12 @@ export const AjouterCeremoniesScreen = ({ navigation }) => {
         data.homonymeId = parseInt(homonymeId);
       }
 
+      if (typeCeremonie === 'mariage') {
+        if (parrainId) data.parrainId = parseInt(parrainId);
+        if (marrainId) data.marrainId = parseInt(marrainId);
+        if (belleSoeurId) data.belleSoeurId = parseInt(belleSoeurId);
+      }
+
       await ceremonieApi.createCeremonie(data);
 
       const successMsg = 'Cérémonie ajoutée avec succès !';
@@ -118,7 +143,7 @@ export const AjouterCeremoniesScreen = ({ navigation }) => {
   const getPlaceholderTitre = () => {
     switch (typeCeremonie) {
       case 'mariage':
-        return 'Ex: Mariage ';
+        return 'Ex: Mariage de [Prénom] et [Prénom]';
       case 'bapteme':
         return 'Ex: Baptême de ';
       case 'deces':
@@ -237,16 +262,25 @@ export const AjouterCeremoniesScreen = ({ navigation }) => {
                 />
               </View>
             ) : (
-              <View style={styles.inputContainer}>
-                <Ionicons name="calendar-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  value={dateCeremonie}
-                  onChangeText={setDateCeremonie}
-                  placeholder="AAAA-MM-JJ"
-                  placeholderTextColor={COLORS.textSecondary}
-                />
-              </View>
+              <>
+                <TouchableOpacity
+                  style={styles.inputContainer}
+                  onPress={showDatePickerModal}
+                >
+                  <Ionicons name="calendar-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
+                  <Text style={[styles.input, !dateCeremonie && { color: COLORS.textSecondary }]}>
+                    {dateCeremonie || 'Sélectionner une date'}
+                  </Text>
+                </TouchableOpacity>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={dateCeremonie ? new Date(dateCeremonie) : new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleDateChange}
+                  />
+                )}
+              </>
             )}
           </View>
 
@@ -314,6 +348,73 @@ export const AjouterCeremoniesScreen = ({ navigation }) => {
                 </Picker>
               </View>
             </View>
+          )}
+
+          {typeCeremonie === 'mariage' && (
+            <>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Parrain</Text>
+                <View style={styles.pickerContainer}>
+                  <Ionicons name="man-outline" size={20} color={COLORS.textSecondary} style={styles.pickerIcon} />
+                  <Picker
+                    selectedValue={parrainId}
+                    onValueChange={setParrainId}
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="-- Sélectionner --" value="" />
+                    {membres.map((membre) => (
+                      <Picker.Item
+                        key={membre.id}
+                        label={`${membre.prenom} ${membre.nom}`}
+                        value={membre.id.toString()}
+                      />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Marraine</Text>
+                <View style={styles.pickerContainer}>
+                  <Ionicons name="woman-outline" size={20} color={COLORS.textSecondary} style={styles.pickerIcon} />
+                  <Picker
+                    selectedValue={marrainId}
+                    onValueChange={setMarrainId}
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="-- Sélectionner --" value="" />
+                    {membres.map((membre) => (
+                      <Picker.Item
+                        key={membre.id}
+                        label={`${membre.prenom} ${membre.nom}`}
+                        value={membre.id.toString()}
+                      />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Belle soeur / Ndieuké</Text>
+                <View style={styles.pickerContainer}>
+                  <Ionicons name="people-outline" size={20} color={COLORS.textSecondary} style={styles.pickerIcon} />
+                  <Picker
+                    selectedValue={belleSoeurId}
+                    onValueChange={setBelleSoeurId}
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="-- Sélectionner --" value="" />
+                    {membres.map((membre) => (
+                      <Picker.Item
+                        key={membre.id}
+                        label={`${membre.prenom} ${membre.nom}`}
+                        value={membre.id.toString()}
+                      />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+            </>
           )}
         </View>
 

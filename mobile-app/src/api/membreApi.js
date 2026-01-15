@@ -61,12 +61,7 @@ export const membreApi = {
 
   // Rechercher par nom/prénom
   rechercherParNom: async (nom) => {
-    console.log('🔍 Recherche par nom - Input:', nom);
-    console.log('🔍 Recherche par nom - Type:', typeof nom);
-    console.log('🔍 Recherche par nom - Encoded:', encodeURIComponent(nom));
     const response = await api.get(`/membre/recherche/nom/${encodeURIComponent(nom)}`);
-    console.log('✅ Réponse recherche:', response.data);
-    // Extraire le tableau 'data' de la réponse
     return response.data.data || response.data;
   },
 

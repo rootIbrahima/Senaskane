@@ -18,14 +18,14 @@ const storage = multer.diskStorage({
     }
 });
 
-const upload = multer({ 
+const upload = multer({
     storage: storage,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
     fileFilter: (req, file, cb) => {
         const allowedTypes = /jpeg|jpg|png/;
         const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
         const mimetype = allowedTypes.test(file.mimetype);
-        
+
         if (mimetype && extname) {
             return cb(null, true);
         } else {
@@ -35,8 +35,115 @@ const upload = multer({
 });
 
 /**
+ * GET /api/membre
+ * Obtenir tous les membres (route simplifiée)
+ */
+router.get('/', authenticateToken, async (req, res) => {
+    try {
+        const familleId = req.user.familleId;
+
+        const [membres] = await db.execute(
+            `SELECT id, numero_identification, nom, prenom, sexe, date_naissance, lieu_naissance, photo, profession, lieu_residence
+            FROM membre
+            WHERE famille_id = ?
+            ORDER BY nom, prenom`,
+            [familleId]
+        );
+
+        res.json({ data: membres });
+
+    } catch (error) {
+        console.error('Erreur récupération membres:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * POST /api/membre
+ * Ajouter un membre (route simplifiée pour le frontend)
+ */
+router.post('/', authenticateToken, requireAdmin, upload.single('photo'), async (req, res) => {
+    try {
+        const familleId = req.user.familleId;
+        const adminId = req.user.userId;
+
+        // Accepter les champs en snake_case (frontend) ou camelCase (ancien code)
+        const nom = req.body.nom;
+        const prenom = req.body.prenom;
+        const sexe = req.body.sexe;
+        const dateNaissance = req.body.date_naissance || req.body.dateNaissance || null;
+        const lieuNaissance = req.body.lieu_naissance || req.body.lieuNaissance || null;
+        const profession = req.body.profession || null;
+        const lieuResidence = req.body.lieu_residence || req.body.lieuResidence || null;
+        const nomConjoint = req.body.nom_conjoint || req.body.nomConjoint || null;
+
+        // Validation des champs requis
+        if (!nom || !prenom || !sexe) {
+            return res.status(400).json({
+                error: 'Les champs nom, prénom et sexe sont obligatoires'
+            });
+        }
+
+        const donnesMembre = {
+            familleId,
+            nom,
+            prenom,
+            sexe,
+            dateNaissance: dateNaissance || null,
+            lieuNaissance: lieuNaissance || null,
+            profession: profession || null,
+            lieuResidence: lieuResidence || null,
+            nomConjoint: nomConjoint || null,
+            photo: req.file ? req.file.filename : null,
+            informationsSupplementaires: req.body.informations_supplementaires || req.body.informationsSupplementaires || null,
+            pereId: (req.body.pere_id || req.body.pereId) ? parseInt(req.body.pere_id || req.body.pereId) : null,
+            mereId: (req.body.mere_id || req.body.mereId) ? parseInt(req.body.mere_id || req.body.mereId) : null
+        };
+
+        const membre = await Membre.ajouter(donnesMembre);
+
+        // Ajouter les liens parentaux si fournis
+        if (donnesMembre.pereId) {
+            await Membre.ajouterLienParental(
+                membre.id,
+                donnesMembre.pereId,
+                'pere',
+                familleId
+            );
+        }
+
+        if (donnesMembre.mereId) {
+            await Membre.ajouterLienParental(
+                membre.id,
+                donnesMembre.mereId,
+                'mere',
+                familleId
+            );
+        }
+
+        res.status(201).json({
+            message: 'Membre ajouté avec succès',
+            data: {
+                id: membre.id,
+                numeroIdentification: membre.numeroIdentification,
+                nom: membre.nom,
+                prenom: membre.prenom,
+                sexe: membre.sexe,
+                photo: membre.photo,
+                dateNaissance: membre.dateNaissance,
+                lieuNaissance: membre.lieuNaissance
+            }
+        });
+
+    } catch (error) {
+        console.error('Erreur ajout membre:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
  * POST /api/membre/ajouter
- * Ajouter un membre à l'arbre généalogique
+ * Ajouter un membre à l'arbre généalogique (ancienne route - compatibilité)
  */
 router.post('/ajouter', authenticateToken, requireAdmin, upload.single('photo'), async (req, res) => {
     try {

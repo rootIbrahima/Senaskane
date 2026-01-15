@@ -1,351 +1,250 @@
-# 🚀 GUIDE DE DÉPLOIEMENT - SENASKANE
+# GUIDE DE DEPLOIEMENT - BAILA GENEA / SENASKANE
 
-Ce guide vous aidera à déployer le backend et générer l'APK de l'application mobile.
-
-## 📋 TABLE DES MATIÈRES
-
-1. [Prérequis](#prérequis)
-2. [Déploiement du Backend](#déploiement-du-backend)
-3. [Configuration de l'Application Mobile](#configuration-de-lapplication-mobile)
-4. [Génération de l'APK](#génération-de-lapk)
+Ce guide explique comment deployer:
+- **Backend (API)** sur Render
+- **Frontend (Web App)** sur Vercel
 
 ---
 
-## ✅ PRÉREQUIS
+## PREREQUIS
 
-- Compte GitHub (gratuit)
+- Compte GitHub avec le code pousse
 - Compte Render.com (gratuit)
-- Compte Expo (gratuit)
-- Node.js installé
-- Git installé
+- Compte Vercel.com (gratuit)
+- Base de donnees MySQL (Railway, PlanetScale, ou autre)
 
 ---
 
-## 🌐 DÉPLOIEMENT DU BACKEND
+## PARTIE 1: PUSH GITHUB (Mise a jour du code)
 
-### Étape 1: Préparer la base de données
-
-#### Option A: Railway.app (Recommandé - Gratuit)
-
-1. Allez sur https://railway.app/
-2. Connectez-vous avec GitHub
-3. Cliquez sur "New Project" → "Provision MySQL"
-4. Une fois créée, cliquez sur votre base MySQL
-5. Onglet "Connect" → Copiez les informations de connexion
-
-#### Option B: FreeMySQLHosting.net (Alternative gratuite)
-
-1. Allez sur https://www.freemysqlhosting.net/
-2. Créez un compte gratuit
-3. Créez une nouvelle base de données
-4. Notez les informations de connexion
-
-### Étape 2: Importer la base de données
-
-1. Connectez-vous à votre base MySQL distante
-2. Importez votre fichier SQL local:
-
-```bash
-# Si vous avez une sauvegarde
-mysql -h [DB_HOST] -u [DB_USER] -p[DB_PASSWORD] [DB_NAME] < backup.sql
-```
-
-OU créez les tables manuellement via phpMyAdmin/MySQL Workbench
-
-### Étape 3: Déployer sur Render.com
-
-1. **Créer un compte sur Render.com**
-   - Allez sur https://render.com/
-   - Connectez-vous avec GitHub
-
-2. **Pousser le code sur GitHub**
+### Si le repo existe deja (mise a jour):
 
 ```bash
 cd c:\Users\lyibr\Desktop\MrSall\Senaskane
 
-# Initialiser git si ce n'est pas déjà fait
-git init
-git add .
-git commit -m "Préparation pour le déploiement"
+# Voir les fichiers modifies
+git status
 
-# Créer un nouveau repository sur GitHub, puis:
-git remote add origin https://github.com/votre-username/senaskane.git
+# Ajouter tous les fichiers modifies
+git add .
+
+# Creer un commit
+git commit -m "Mise a jour: optimisations performance et config deploiement"
+
+# Pousser vers GitHub
+git push origin main
+```
+
+### Si c'est la premiere fois:
+
+```bash
+cd c:\Users\lyibr\Desktop\MrSall\Senaskane
+
+# Initialiser git
+git init
+
+# Ajouter tous les fichiers
+git add .
+
+# Premier commit
+git commit -m "Initial commit - Baila Genea"
+
+# Ajouter le remote (remplacer par votre URL)
+git remote add origin https://github.com/VOTRE-USERNAME/senaskane.git
+
+# Pousser
 git branch -M main
 git push -u origin main
 ```
 
-3. **Configurer Render**
-   - Sur Render.com, cliquez "New +" → "Web Service"
-   - Connectez votre repository GitHub
-   - Configuration:
-     - **Name**: `senaskane-backend`
-     - **Root Directory**: `backend`
-     - **Environment**: `Node`
-     - **Build Command**: `npm install`
-     - **Start Command**: `node server.js`
-     - **Instance Type**: `Free`
+---
 
-4. **Ajouter les variables d'environnement**
+## PARTIE 2: DEPLOYER LE BACKEND SUR RENDER
 
-   Dans l'onglet "Environment" de Render, ajoutez:
+### Si Render est deja configure (mise a jour automatique):
 
+Render se met a jour automatiquement quand vous faites `git push`.
+Attendez 2-3 minutes et verifiez les logs sur render.com.
+
+### Pour forcer un nouveau deploiement:
+
+1. Allez sur https://dashboard.render.com
+2. Selectionnez votre service backend
+3. Cliquez sur "Manual Deploy" -> "Deploy latest commit"
+
+### Si c'est la premiere fois sur Render:
+
+1. **Allez sur** https://render.com et connectez-vous
+
+2. **Cliquez** "New +" -> "Web Service"
+
+3. **Connectez** votre repository GitHub
+
+4. **Configuration**:
    ```
-   DB_HOST=votre_host_railway
-   DB_USER=votre_user
-   DB_PASSWORD=votre_password
-   DB_NAME=votre_database
-   JWT_SECRET=votre_secret_jwt_securise
-   PORT=3000
+   Name: senaskane-api
+   Root Directory: backend
+   Environment: Node
+   Build Command: npm install
+   Start Command: npm start
+   Instance Type: Free
+   ```
+
+5. **Variables d'environnement** (onglet Environment):
+   ```
    NODE_ENV=production
-   SMTP_HOST=smtp.gmail.com
-   SMTP_PORT=587
-   SMTP_USER=votre_email@gmail.com
-   SMTP_PASS=votre_app_password
-   EMAIL_FROM="Senaskane <noreply@senaskane.com>"
-   APP_URL=https://senaskane-backend.onrender.com
-   ALLOWED_ORIGINS=*
+   PORT=3000
+   DB_HOST=votre-host-mysql
+   DB_USER=votre-user
+   DB_PASSWORD=votre-password
+   DB_NAME=senaskane_db
+   DB_PORT=3306
+   JWT_SECRET=votre-secret-jwt-64-caracteres
+   ALLOWED_ORIGINS=https://baila-genea.vercel.app
    ```
 
-5. **Déployer**
-   - Cliquez sur "Create Web Service"
-   - Attendez que le déploiement se termine (5-10 minutes)
-   - Votre API sera accessible à: `https://senaskane-backend.onrender.com`
+6. **Cliquez** "Create Web Service"
 
-### Étape 4: Tester l'API
+7. **Notez l'URL** de votre API (ex: https://senaskane-api.onrender.com)
 
-```bash
-# Tester que l'API fonctionne
-curl https://senaskane-backend.onrender.com/api/auth/verify
+### Tester l'API:
+
+Ouvrez dans le navigateur:
+```
+https://senaskane-api.onrender.com/health
 ```
 
----
-
-## 📱 CONFIGURATION DE L'APPLICATION MOBILE
-
-### Étape 1: Installer expo-constants
-
-```bash
-cd mobile-app
-npx expo install expo-constants
-```
-
-### Étape 2: Créer le fichier app.config.js
-
-Créez `mobile-app/app.config.js`:
-
-```javascript
-export default {
-  expo: {
-    name: "Senaskane",
-    slug: "senaskane",
-    version: "1.0.0",
-    orientation: "portrait",
-    icon: "./assets/icon.png",
-    userInterfaceStyle: "light",
-    splash: {
-      image: "./assets/splash.jpg",
-      resizeMode: "contain",
-      backgroundColor: "#2E7D32"
-    },
-    assetBundlePatterns: [
-      "**/*"
-    ],
-    ios: {
-      supportsTablet: true,
-      bundleIdentifier: "com.senaskane.app"
-    },
-    android: {
-      package: "com.senaskane.app",
-      versionCode: 1,
-      adaptiveIcon: {
-        foregroundImage: "./assets/icon.png",
-        backgroundColor: "#2E7D32"
-      },
-      permissions: [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
-      ]
-    },
-    web: {
-      favicon: "./assets/favicon.png"
-    },
-    extra: {
-      apiUrl: process.env.API_URL || "https://senaskane-backend.onrender.com/api"
-    }
-  }
-};
-```
-
-### Étape 3: Modifier config.js
-
-Modifiez `mobile-app/src/utils/config.js`:
-
-```javascript
-import Constants from 'expo-constants';
-
-// Configuration de l'application
-export const API_URL = Constants.expoConfig?.extra?.apiUrl ||
-  'https://senaskane-backend.onrender.com/api';
-
-export const COLORS = {
-  // ... reste du code
-};
-```
-
----
-
-## 📦 GÉNÉRATION DE L'APK
-
-### Étape 1: Installer EAS CLI
-
-```bash
-npm install -g eas-cli
-```
-
-### Étape 2: Se connecter à Expo
-
-```bash
-cd mobile-app
-eas login
-```
-
-Créez un compte sur https://expo.dev si vous n'en avez pas.
-
-### Étape 3: Configurer EAS Build
-
-```bash
-eas build:configure
-```
-
-Cela créera `eas.json`. Modifiez-le:
-
+Vous devez voir:
 ```json
-{
-  "build": {
-    "preview": {
-      "android": {
-        "buildType": "apk"
-      }
-    },
-    "production": {
-      "android": {
-        "buildType": "apk"
-      }
-    }
-  }
-}
+{"status":"OK","timestamp":"...","environment":"production"}
 ```
 
-### Étape 4: Générer l'APK
+---
+
+## PARTIE 3: DEPLOYER LE FRONTEND SUR VERCEL
+
+### Etape 1: Creer un compte Vercel
+
+1. Allez sur https://vercel.com
+2. Cliquez "Sign Up" -> "Continue with GitHub"
+3. Autorisez Vercel a acceder a vos repos
+
+### Etape 2: Importer le projet
+
+1. Cliquez "Add New..." -> "Project"
+2. Selectionnez votre repository "senaskane"
+3. **Configuration importante**:
+   ```
+   Framework Preset: Vite
+   Root Directory: web-app     <-- IMPORTANT!
+   Build Command: npm run build
+   Output Directory: dist
+   ```
+
+### Etape 3: Variables d'environnement
+
+Avant de deployer, ajoutez cette variable:
+
+```
+VITE_API_URL = https://senaskane-api.onrender.com/api
+```
+
+(Remplacez par l'URL de votre API Render)
+
+### Etape 4: Deployer
+
+1. Cliquez "Deploy"
+2. Attendez 1-2 minutes
+3. Votre site sera accessible a: https://votre-projet.vercel.app
+
+### Mise a jour du frontend:
+
+Vercel se met a jour automatiquement a chaque `git push`.
+
+---
+
+## PARTIE 4: CONFIGURER CORS (Important!)
+
+Apres avoir deploye sur Vercel, retournez sur Render:
+
+1. Dashboard Render -> Votre service -> Environment
+2. Modifiez `ALLOWED_ORIGINS`:
+   ```
+   ALLOWED_ORIGINS=https://baila-genea.vercel.app,https://votre-projet.vercel.app
+   ```
+3. Cliquez "Save Changes"
+4. Le service va redemarrer automatiquement
+
+---
+
+## RESUME DES COMMANDES GIT
 
 ```bash
-# Pour un build de preview (test)
-eas build -p android --profile preview
+# Aller dans le dossier du projet
+cd c:\Users\lyibr\Desktop\MrSall\Senaskane
 
-# Pour un build de production
-eas build -p android --profile production
-```
+# Voir ce qui a change
+git status
 
-**Note**: Le build prend environ 15-20 minutes sur les serveurs Expo.
+# Ajouter les modifications
+git add .
 
-### Étape 5: Télécharger l'APK
+# Commit avec message
+git commit -m "Description de vos changements"
 
-Une fois le build terminé:
-- Vous recevrez un email avec le lien de téléchargement
-- OU visitez https://expo.dev/ → Projects → Builds
-- Téléchargez l'APK
-
-### Étape 6: Installer sur votre téléphone
-
-1. **Transférez l'APK sur votre téléphone** (USB, email, Drive, etc.)
-2. **Activez les sources inconnues**:
-   - Paramètres → Sécurité → Sources inconnues → Activez
-3. **Installez l'APK** en cliquant dessus
-
----
-
-## 🔐 SÉCURITÉ IMPORTANTE
-
-⚠️ **AVANT DE DÉPLOYER EN PRODUCTION:**
-
-1. **Changez le JWT_SECRET** dans les variables d'environnement
-2. **Configurez CORS correctement** - Ne laissez pas `*` en production
-3. **Utilisez HTTPS** pour l'API
-4. **Ne commitez JAMAIS le fichier .env**
-5. **Créez un nouveau mot de passe d'application Gmail** pour SMTP
-
-### Générer un JWT_SECRET sécurisé:
-
-```bash
-node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+# Pousser vers GitHub (declenche auto-deploy)
+git push origin main
 ```
 
 ---
 
-## 📱 TESTER L'APPLICATION
+## VERIFICATION FINALE
 
-1. **Installez l'APK** sur votre téléphone Android
-2. **Testez toutes les fonctionnalités**:
-   - Inscription / Connexion
-   - Ajout de membres
-   - Création de cérémonies
-   - Upload d'images
-   - Arbre généalogique
-   - Musée familial
+### Backend (Render):
+- [ ] https://votre-api.onrender.com/health repond OK
+- [ ] Variables d'environnement configurees
+- [ ] ALLOWED_ORIGINS contient l'URL Vercel
 
----
-
-## 🐛 DÉPANNAGE
-
-### L'API ne répond pas
-
-```bash
-# Vérifiez les logs sur Render
-# Dashboard → Votre service → Logs
-```
-
-### L'app ne se connecte pas à l'API
-
-- Vérifiez que l'URL dans `config.js` est correcte
-- Testez l'API manuellement: `curl https://votre-api.com/api/auth/verify`
-- Vérifiez que CORS est configuré correctement
-
-### Le build Expo échoue
-
-- Vérifiez que `app.config.js` est correct
-- Assurez-vous que tous les assets existent (icon.png, splash.jpg)
-- Consultez les logs du build sur expo.dev
+### Frontend (Vercel):
+- [ ] Site accessible
+- [ ] Variable VITE_API_URL configuree
+- [ ] Connexion fonctionne
 
 ---
 
-## 📞 SUPPORT
+## DEPANNAGE
 
-Pour toute question, vérifiez:
-- Les logs Render pour le backend
-- Les logs Expo pour le build mobile
-- La console du navigateur pour les erreurs frontend
+### "CORS error" dans la console:
+-> Verifiez ALLOWED_ORIGINS sur Render
 
----
+### "Network error" ou API ne repond pas:
+-> Verifiez que l'API Render est en ligne (peut prendre 30s au reveil)
 
-## ✅ CHECKLIST DE DÉPLOIEMENT
+### Page blanche sur Vercel:
+-> Verifiez que Root Directory = web-app
 
-### Backend
-- [ ] Base de données MySQL créée et importée
-- [ ] Code pushé sur GitHub
-- [ ] Service Render créé et configuré
-- [ ] Variables d'environnement ajoutées
-- [ ] API testée et fonctionnelle
-
-### Mobile
-- [ ] expo-constants installé
-- [ ] app.config.js créé
-- [ ] config.js modifié avec la bonne URL API
-- [ ] EAS CLI installé
-- [ ] Compte Expo créé
-- [ ] APK généré et téléchargé
-- [ ] APK testé sur un appareil physique
+### Build echoue:
+-> Regardez les logs sur Vercel/Render pour l'erreur exacte
 
 ---
 
-**Bonne chance avec votre déploiement ! 🎉**
+## URLS A RETENIR
+
+| Service | URL |
+|---------|-----|
+| Backend API | https://senaskane-api.onrender.com |
+| Frontend Web | https://baila-genea.vercel.app |
+| Health Check | https://senaskane-api.onrender.com/health |
+
+---
+
+## FICHIERS DE CONFIGURATION CREES
+
+| Fichier | Usage |
+|---------|-------|
+| backend/render.yaml | Config Render |
+| backend/Procfile | Commande demarrage |
+| backend/.gitignore | Fichiers ignores |
+| web-app/vercel.json | Config Vercel |
+| web-app/.env.production | Variables prod |
+| web-app/src/services/api.js | URL API dynamique |

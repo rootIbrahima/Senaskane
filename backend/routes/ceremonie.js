@@ -6,8 +6,107 @@ const { authenticateToken, requireAdmin } = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
 
 /**
+ * GET /api/ceremonie
+ * Obtenir toutes les cérémonies (route simplifiée)
+ */
+router.get('/', authenticateToken, async (req, res) => {
+    try {
+        const familleId = req.user.familleId;
+        const { type, annee } = req.query;
+
+        let query = `
+            SELECT c.id, c.famille_id, c.type_ceremonie,
+            c.titre as nom, c.description, c.date_ceremonie as date, c.lieu,
+            c.membre_principal_id, c.homonyme_id, c.created_at, c.updated_at,
+            m.nom as membre_nom, m.prenom as membre_prenom,
+            h.nom as homonyme_nom, h.prenom as homonyme_prenom
+            FROM ceremonie c
+            LEFT JOIN membre m ON c.membre_principal_id = m.id
+            LEFT JOIN membre h ON c.homonyme_id = h.id
+            WHERE c.famille_id = ?
+        `;
+
+        const params = [familleId];
+
+        if (type) {
+            query += ' AND c.type_ceremonie = ?';
+            params.push(type);
+        }
+
+        if (annee) {
+            query += ' AND YEAR(c.date_ceremonie) = ?';
+            params.push(annee);
+        }
+
+        query += ' ORDER BY c.date_ceremonie DESC';
+
+        const [ceremonies] = await db.execute(query, params);
+
+        // Récupérer les parrains/marraines pour chaque cérémonie
+        for (let ceremonie of ceremonies) {
+            const [parrains] = await db.execute(
+                `SELECT pm.*, m.nom, m.prenom
+                FROM parrain_marraine pm
+                JOIN membre m ON pm.membre_id = m.id
+                WHERE pm.ceremonie_id = ?`,
+                [ceremonie.id]
+            );
+            ceremonie.parrains = parrains;
+        }
+
+        res.json({ data: ceremonies });
+
+    } catch (error) {
+        console.error('Erreur récupération cérémonies:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * POST /api/ceremonie
+ * Ajouter une cérémonie (route simplifiée pour le frontend)
+ */
+router.post('/', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const familleId = req.user.familleId;
+
+        // Accepter les champs en snake_case (frontend) ou camelCase (ancien code)
+        const titre = req.body.nom || req.body.titre;
+        const description = req.body.description || null;
+        const dateCeremonie = req.body.date || req.body.date_ceremonie || req.body.dateCeremonie;
+        const lieu = req.body.lieu || null;
+        const typeCeremonie = req.body.type_ceremonie || req.body.typeCeremonie || 'autre';
+
+        // Validation basique
+        if (!titre || !dateCeremonie) {
+            return res.status(400).json({
+                error: 'Le titre et la date sont requis'
+            });
+        }
+
+        const [result] = await db.execute(
+            `INSERT INTO ceremonie
+            (famille_id, type_ceremonie, titre, description, date_ceremonie, lieu)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+            [familleId, typeCeremonie, titre, description, dateCeremonie, lieu]
+        );
+
+        const ceremonieId = result.insertId;
+
+        res.status(201).json({
+            message: 'Cérémonie ajoutée avec succès',
+            data: { id: ceremonieId }
+        });
+
+    } catch (error) {
+        console.error('Erreur ajout cérémonie:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
  * POST /api/ceremonie/ajouter
- * Ajouter une cérémonie familiale
+ * Ajouter une cérémonie familiale (ancienne route - compatibilité)
  */
 router.post('/ajouter', authenticateToken, requireAdmin, [
     body('typeCeremonie').isIn(['mariage', 'bapteme', 'deces', 'tour_famille', 'autre']),
@@ -263,7 +362,15 @@ router.post('/:id/recette', authenticateToken, requireAdmin, [
             `INSERT INTO recette_ceremonie
             (ceremonie_id, type_recette, description, montant, contributeur_nom, contributeur_membre_id, date_recette)
             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [ceremonieId, typeRecette, description, montant, contributeurNom, contributeurMembreId || null, dateRecette]
+            [
+                ceremonieId,
+                typeRecette,
+                description || null,
+                montant,
+                contributeurNom || null,
+                contributeurMembreId || null,
+                dateRecette
+            ]
         );
 
         res.status(201).json({
@@ -342,7 +449,14 @@ router.post('/:id/depense', authenticateToken, requireAdmin, [
             `INSERT INTO depense_ceremonie
             (ceremonie_id, rubrique, description, montant, beneficiaire, date_depense)
             VALUES (?, ?, ?, ?, ?, ?)`,
-            [ceremonieId, rubrique, description, montant, beneficiaire, dateDepense]
+            [
+                ceremonieId,
+                rubrique,
+                description || null,
+                montant,
+                beneficiaire || null,
+                dateDepense
+            ]
         );
 
         res.status(201).json({

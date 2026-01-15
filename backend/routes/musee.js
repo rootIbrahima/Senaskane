@@ -18,14 +18,14 @@ const storage = multer.diskStorage({
     }
 });
 
-const upload = multer({ 
+const upload = multer({
     storage: storage,
     limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
     fileFilter: (req, file, cb) => {
         const allowedTypes = /jpeg|jpg|png|pdf/;
         const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
         const mimetype = allowedTypes.test(file.mimetype);
-        
+
         if (mimetype && extname) {
             return cb(null, true);
         } else {
@@ -35,8 +35,75 @@ const upload = multer({
 });
 
 /**
+ * GET /api/musee
+ * Obtenir tous les objets du musée (route simplifiée)
+ */
+router.get('/', authenticateToken, async (req, res) => {
+    try {
+        const familleId = req.user.familleId;
+
+        const [objets] = await db.execute(
+            `SELECT mf.*,
+            m.nom as proprietaire_nom, m.prenom as proprietaire_prenom
+            FROM musee_familial mf
+            LEFT JOIN membre m ON mf.proprietaire_id = m.id
+            WHERE mf.famille_id = ?
+            ORDER BY mf.date_ajout DESC`,
+            [familleId]
+        );
+
+        res.json({ data: objets });
+
+    } catch (error) {
+        console.error('Erreur récupération musée:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * POST /api/musee
+ * Ajouter un objet au musée (route simplifiée pour le frontend)
+ */
+router.post('/', authenticateToken, requireAdmin, upload.single('image'), async (req, res) => {
+    try {
+        const familleId = req.user.familleId;
+
+        // Accepter les champs en snake_case (frontend) ou camelCase (ancien code)
+        const nomObjet = req.body.nom || req.body.nom_objet || req.body.nomObjet;
+        const description = req.body.description || null;
+        const proprietaireId = req.body.proprietaire_id || req.body.proprietaireId || null;
+        const estCommun = req.body.est_commun || req.body.estCommun || false;
+
+        // Validation
+        if (!nomObjet) {
+            return res.status(400).json({
+                error: 'Le nom de l\'objet est requis'
+            });
+        }
+
+        const imageUrl = req.file ? req.file.filename : null;
+
+        const [result] = await db.execute(
+            `INSERT INTO musee_familial
+            (famille_id, nom_objet, description, image_url, proprietaire_id, est_commun)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+            [familleId, nomObjet, description, imageUrl, proprietaireId, estCommun]
+        );
+
+        res.status(201).json({
+            message: 'Objet ajouté au musée avec succès',
+            data: { id: result.insertId, imageUrl }
+        });
+
+    } catch (error) {
+        console.error('Erreur ajout objet musée:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
  * POST /api/musee/ajouter
- * Ajouter un objet au musée familial
+ * Ajouter un objet au musée familial (ancienne route - compatibilité)
  */
 router.post('/ajouter', authenticateToken, requireAdmin, upload.single('image'), [
     body('nomObjet').notEmpty().withMessage('Le nom de l\'objet est requis')

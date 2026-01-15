@@ -4,6 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, FONT_SIZES } from '../utils/config';
 
 export const TreeNode = ({ membre, onPress, isRoot, style }) => {
+  // Validation du membre
+  if (!membre) return null;
+
   const getGenderIcon = (sexe) => {
     return sexe === 'M' ? 'male' : 'female';
   };
@@ -14,8 +17,12 @@ export const TreeNode = ({ membre, onPress, isRoot, style }) => {
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.getFullYear();
+    try {
+      const date = new Date(dateStr);
+      return date.getFullYear();
+    } catch (e) {
+      return '';
+    }
   };
 
   const isDeceased = membre.date_deces != null;

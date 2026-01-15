@@ -14,7 +14,7 @@ const CotisationService = require('../services/CotisationService');
 router.post('/activer', authenticateToken, requireAdmin, [
     body('ceremonieId').isInt({ min: 1 }),
     body('montantCotisation').isFloat({ min: 0.01 }).withMessage('Le montant doit être positif'),
-    body('nomTresorier').notEmpty().withMessage('Le nom du trésorier est requis')
+    body('tresorierMembreId').isInt({ min: 1 }).withMessage('Le membre trésorier est requis')
 ], async (req, res) => {
     try {
         const errors = validationResult(req);
@@ -22,7 +22,7 @@ router.post('/activer', authenticateToken, requireAdmin, [
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { ceremonieId, montantCotisation, nomTresorier } = req.body;
+        const { ceremonieId, montantCotisation, tresorierMembreId } = req.body;
         const familleId = req.user.familleId;
 
         // Vérifier que la cérémonie appartient à la famille
@@ -35,11 +35,24 @@ router.post('/activer', authenticateToken, requireAdmin, [
             return res.status(404).json({ error: 'Cérémonie non trouvée' });
         }
 
+        // Vérifier que le membre existe et appartient à la famille
+        const [membres] = await db.execute(
+            'SELECT id, nom, prenom, numero_identification FROM membre WHERE id = ? AND famille_id = ?',
+            [tresorierMembreId, familleId]
+        );
+
+        if (membres.length === 0) {
+            return res.status(404).json({ error: 'Membre non trouvé' });
+        }
+
+        const membre = membres[0];
+
         // Créer le compte trésorier
         const tresorier = await CotisationService.creerTresorier(
-            ceremonieId, 
-            familleId, 
-            nomTresorier
+            ceremonieId,
+            familleId,
+            tresorierMembreId,
+            `${membre.prenom} ${membre.nom}`
         );
 
         // Activer les cotisations
@@ -123,12 +136,12 @@ router.post('/premier-connexion', authenticateToken, [
  */
 router.get('/liste/:ceremonieId', authenticateToken, async (req, res) => {
     try {
-        const ceremonieId = parseInt(req.params.id);
+        const ceremonieId = parseInt(req.params.ceremonieId);
         const familleId = req.user.familleId;
 
         // Vérifier les permissions
         const [ceremonie] = await db.execute(
-            'SELECT tresorier_id FROM ceremonie WHERE id = ? AND famille_id = ?',
+            'SELECT id FROM ceremonie WHERE id = ? AND famille_id = ?',
             [ceremonieId, familleId]
         );
 
@@ -136,8 +149,14 @@ router.get('/liste/:ceremonieId', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'Cérémonie non trouvée' });
         }
 
-        const estAutorise = req.user.role === 'admin' || 
-                           (req.user.role === 'tresorier' && req.user.id === ceremonie[0].tresorier_id);
+        // Récupérer le trésorier de cette cérémonie
+        const [tresorier] = await db.execute(
+            'SELECT utilisateur_id FROM tresorier_ceremonie WHERE ceremonie_id = ?',
+            [ceremonieId]
+        );
+
+        const estAutorise = req.user.role === 'admin' ||
+                           (req.user.role === 'tresorier' && tresorier.length > 0 && req.user.userId === tresorier[0].utilisateur_id);
 
         if (!estAutorise) {
             return res.status(403).json({ error: 'Accès non autorisé' });
@@ -298,7 +317,7 @@ router.get('/depenses/:ceremonieId', authenticateToken, async (req, res) => {
 
         // Vérifier les permissions
         const [ceremonie] = await db.execute(
-            'SELECT tresorier_id FROM ceremonie WHERE id = ? AND famille_id = ?',
+            'SELECT id FROM ceremonie WHERE id = ? AND famille_id = ?',
             [ceremonieId, familleId]
         );
 
@@ -306,8 +325,14 @@ router.get('/depenses/:ceremonieId', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'Cérémonie non trouvée' });
         }
 
-        const estAutorise = req.user.role === 'admin' || 
-                           (req.user.role === 'tresorier' && req.user.id === ceremonie[0].tresorier_id);
+        // Récupérer le trésorier de cette cérémonie
+        const [tresorier] = await db.execute(
+            'SELECT utilisateur_id FROM tresorier_ceremonie WHERE ceremonie_id = ?',
+            [ceremonieId]
+        );
+
+        const estAutorise = req.user.role === 'admin' ||
+                           (req.user.role === 'tresorier' && tresorier.length > 0 && req.user.userId === tresorier[0].utilisateur_id);
 
         if (!estAutorise) {
             return res.status(403).json({ error: 'Accès non autorisé' });

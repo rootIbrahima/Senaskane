@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -41,7 +41,7 @@ export const MuseeScreen = ({ navigation }) => {
     loadObjets();
   };
 
-  const renderObjet = ({ item }) => (
+  const renderObjet = useCallback(({ item }) => (
     <TouchableOpacity
       style={styles.objetCard}
       onPress={() => navigation.navigate('ObjetDetail', { objet: item })}
@@ -84,7 +84,13 @@ export const MuseeScreen = ({ navigation }) => {
         )}
       </View>
     </TouchableOpacity>
-  );
+  ), [navigation]);
+
+  const getItemLayout = useCallback((data, index) => ({
+    length: 240, // Image height (160) + info section (~80)
+    offset: 240 * Math.floor(index / 2), // Grid layout with 2 columns
+    index,
+  }), []);
 
   if (loading) {
     return <Loading text="Chargement du musée..." />;
@@ -107,6 +113,12 @@ export const MuseeScreen = ({ navigation }) => {
             <Text style={styles.emptyText}>Aucun objet dans le musée</Text>
           </View>
         }
+        // Performance optimizations
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={5}
+        removeClippedSubviews={true}
+        getItemLayout={getItemLayout}
       />
       {user?.role === 'admin' && (
         <TouchableOpacity
