@@ -114,20 +114,20 @@ export const MemberDetail = () => {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <div className="bg-blue-600 text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button onClick={() => navigate('/membres')} className="text-2xl hover:text-blue-200">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <button onClick={() => navigate('/membres')} className="text-xl sm:text-2xl hover:text-blue-200">
                 ←
               </button>
-              <h1 className="text-3xl font-bold">Détails du membre</h1>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Détails du membre</h1>
             </div>
             {isAdmin && (
-              <div className="flex gap-2">
-                <Button onClick={() => setShowEditModal(true)} className="bg-white text-blue-700 hover:bg-slate-100">
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button onClick={() => setShowEditModal(true)} className="bg-white text-blue-700 hover:bg-slate-100 flex-1 sm:flex-none text-sm sm:text-base">
                   Modifier
                 </Button>
-                <Button onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+                <Button onClick={handleDelete} className="bg-red-600 hover:bg-red-700 flex-1 sm:flex-none text-sm sm:text-base">
                   Supprimer
                 </Button>
               </div>
@@ -137,7 +137,7 @@ export const MemberDetail = () => {
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
         <Card>
           <div className="flex flex-col md:flex-row gap-8">
             {/* Photo */}

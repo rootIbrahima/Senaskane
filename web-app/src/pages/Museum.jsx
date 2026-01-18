@@ -133,17 +133,17 @@ export const Museum = () => {
   if (loading) return <Loading text="Chargement du musée..." />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 text-white rounded-2xl shadow-2xl p-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="bg-white/20 backdrop-blur-md p-4 rounded-2xl">
-              <Building2 className="w-10 h-10" strokeWidth={2} />
+      <div className="bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 text-white rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 md:p-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="bg-white/20 backdrop-blur-md p-3 sm:p-4 rounded-xl sm:rounded-2xl">
+              <Building2 className="w-8 h-8 sm:w-10 sm:h-10" strokeWidth={2} />
             </div>
             <div>
-              <h1 className="text-3xl font-bold mb-1">Musée Familial</h1>
-              <p className="text-slate-200 flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1">Musée Familial</h1>
+              <p className="text-slate-200 flex items-center gap-2 text-sm sm:text-base">
                 <Users className="w-4 h-4" />
                 Collection de la famille {famille?.nom}
               </p>
@@ -152,9 +152,9 @@ export const Museum = () => {
           {isAdmin && (
             <button
               onClick={() => setShowModal(true)}
-              className="bg-white text-slate-700 px-6 py-3 rounded-xl font-semibold hover:bg-slate-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center gap-2"
+              className="bg-white text-slate-700 px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold hover:bg-slate-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center gap-2 w-full sm:w-auto justify-center text-sm sm:text-base"
             >
-              <Upload className="w-5 h-5" />
+              <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
               Ajouter un objet
             </button>
           )}
@@ -162,7 +162,7 @@ export const Museum = () => {
       </div>
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
         <div className="bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200 rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -202,20 +202,20 @@ export const Museum = () => {
 
       {/* Content */}
       {objets.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-          <Building2 className="w-16 h-16 text-slate-300 mx-auto mb-4" strokeWidth={1.5} />
-          <p className="text-slate-500 text-lg">Aucun objet dans le musée pour le moment</p>
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-8 sm:p-12 text-center">
+          <Building2 className="w-12 h-12 sm:w-16 sm:h-16 text-slate-300 mx-auto mb-4" strokeWidth={1.5} />
+          <p className="text-slate-500 text-base sm:text-lg">Aucun objet dans le musée pour le moment</p>
           {isAdmin && (
             <button
               onClick={() => setShowModal(true)}
-              className="mt-4 text-slate-600 hover:text-slate-700 font-semibold"
+              className="mt-4 text-slate-600 hover:text-slate-700 font-semibold text-sm sm:text-base"
             >
               Ajouter le premier objet →
             </button>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {objets.map((objet) => (
             <div
               key={objet.id}

@@ -103,26 +103,26 @@ export const FamilyInfo = () => {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <div className="bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/')} className="text-2xl hover:text-slate-200">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:py-6">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <button onClick={() => navigate('/')} className="text-xl sm:text-2xl hover:text-slate-200">
               ←
             </button>
-            <h1 className="text-3xl font-bold">Informations de la Famille</h1>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Informations de la Famille</h1>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Informations principales */}
           <div className="lg:col-span-2">
             <Card>
-              <div className="flex justify-between items-start mb-6">
-                <h2 className="text-2xl font-bold">Informations</h2>
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-0 mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold">Informations</h2>
                 {isAdmin && !editing && (
-                  <Button onClick={() => setEditing(true)}>Modifier</Button>
+                  <Button onClick={() => setEditing(true)} className="w-full sm:w-auto text-sm sm:text-base">Modifier</Button>
                 )}
               </div>
 
@@ -140,27 +140,27 @@ export const FamilyInfo = () => {
                   )}
 
                   {/* Code d'accès - Section mise en avant */}
-                  <div className="bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 rounded-2xl p-6 text-white shadow-2xl">
+                  <div className="bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white shadow-2xl">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="bg-white/20 p-3 rounded-xl">
-                        <Key className="w-6 h-6" strokeWidth={2} />
+                      <div className="bg-white/20 p-2 sm:p-3 rounded-xl">
+                        <Key className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
                       </div>
                       <div>
-                        <p className="text-sm text-slate-200">Code d'accès famille</p>
+                        <p className="text-xs sm:text-sm text-slate-200">Code d'accès famille</p>
                         <p className="text-xs text-slate-300">Partagez ce code avec vos proches</p>
                       </div>
                     </div>
 
-                    <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 mb-4">
-                      <p className="text-4xl font-bold tracking-widest text-center font-mono">
+                    <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 sm:p-4 mb-4">
+                      <p className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-widest text-center font-mono">
                         {famille?.code_acces || 'XXXXXXXX'}
                       </p>
                     </div>
 
-                    <div className="flex gap-3">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                       <button
                         onClick={handleCopyCode}
-                        className="flex-1 bg-white text-slate-800 px-4 py-3 rounded-xl font-semibold hover:bg-slate-50 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                        className="flex-1 bg-white text-slate-800 px-3 sm:px-4 py-2 sm:py-3 rounded-xl font-semibold hover:bg-slate-50 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 text-sm sm:text-base"
                       >
                         {copied ? (
                           <span key="copied" className="flex items-center gap-2">

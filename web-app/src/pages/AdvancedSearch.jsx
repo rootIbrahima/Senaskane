@@ -198,44 +198,44 @@ export const AdvancedSearch = () => {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <div className="bg-blue-600 text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/')} className="text-2xl hover:text-blue-200">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:py-6">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <button onClick={() => navigate('/')} className="text-xl sm:text-2xl hover:text-blue-200">
               ←
             </button>
-            <h1 className="text-3xl font-bold">Recherche Avancée</h1>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Recherche Avancée</h1>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Search Forms */}
           <div className="lg:col-span-1">
             <Card>
               <div className="flex flex-col gap-2 mb-4">
                 <button
                   onClick={() => setActiveTab('advanced')}
-                  className={`px-4 py-2 rounded ${activeTab === 'advanced' ? 'bg-blue-600 text-white' : 'bg-slate-100'}`}
+                  className={`px-3 sm:px-4 py-2 rounded text-sm sm:text-base ${activeTab === 'advanced' ? 'bg-blue-600 text-white' : 'bg-slate-100'}`}
                 >
                   Recherche Avancée
                 </button>
                 <button
                   onClick={() => setActiveTab('simple')}
-                  className={`px-4 py-2 rounded ${activeTab === 'simple' ? 'bg-blue-600 text-white' : 'bg-slate-100'}`}
+                  className={`px-3 sm:px-4 py-2 rounded text-sm sm:text-base ${activeTab === 'simple' ? 'bg-blue-600 text-white' : 'bg-slate-100'}`}
                 >
                   Recherche Simple
                 </button>
                 <button
                   onClick={() => setActiveTab('relationship')}
-                  className={`px-4 py-2 rounded ${activeTab === 'relationship' ? 'bg-blue-600 text-white' : 'bg-slate-100'}`}
+                  className={`px-3 sm:px-4 py-2 rounded text-sm sm:text-base ${activeTab === 'relationship' ? 'bg-blue-600 text-white' : 'bg-slate-100'}`}
                 >
                   Lien de Parenté
                 </button>
                 <button
                   onClick={() => setActiveTab('genealogy')}
-                  className={`px-4 py-2 rounded ${activeTab === 'genealogy' ? 'bg-blue-600 text-white' : 'bg-slate-100'}`}
+                  className={`px-3 sm:px-4 py-2 rounded text-sm sm:text-base ${activeTab === 'genealogy' ? 'bg-blue-600 text-white' : 'bg-slate-100'}`}
                 >
                   Généalogie
                 </button>

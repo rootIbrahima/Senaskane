@@ -62,6 +62,7 @@ export const ceremoniesAPI = {
   getAll: () => api.get('/ceremonie'),
   getById: (id) => api.get(`/ceremonie/${id}`),
   create: (data) => api.post('/ceremonie', data),
+  createWithParrains: (data) => api.post('/ceremonie/ajouter', data),
   update: (id, data) => api.put(`/ceremonie/${id}`, data),
   delete: (id) => api.delete(`/ceremonie/${id}`),
   // Recettes

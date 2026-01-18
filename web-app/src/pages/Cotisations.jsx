@@ -345,15 +345,15 @@ export const Cotisations = () => {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <div className="bg-blue-600 text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button onClick={() => navigate('/ceremonies')} className="text-2xl hover:text-blue-200">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <button onClick={() => navigate('/ceremonies')} className="text-xl sm:text-2xl hover:text-blue-200">
                 ←
               </button>
               <div>
-                <h1 className="text-3xl font-bold">Gestion Financière</h1>
-                <p className="text-blue-200">{ceremonie?.titre}</p>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Gestion Financière</h1>
+                <p className="text-blue-200 text-sm sm:text-base">{ceremonie?.titre}</p>
               </div>
             </div>
           </div>
@@ -361,37 +361,43 @@ export const Cotisations = () => {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
         {/* Actions rapides */}
         {estTresorierOuAdmin && (
-          <div className="flex flex-wrap gap-4 mb-6">
+          <div className="flex flex-wrap gap-2 sm:gap-4 mb-6">
             {isAdmin && !ceremonie?.necessite_cotisation && (
-              <Button onClick={() => setShowActivateModal(true)} className="flex items-center gap-2">
-                <Plus size={18} />
-                Activer les cotisations
+              <Button onClick={() => setShowActivateModal(true)} className="flex items-center gap-2 text-sm sm:text-base">
+                <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
+                <span className="hidden xs:inline">Activer les cotisations</span>
+                <span className="xs:hidden">Activer</span>
               </Button>
             )}
             {ceremonie?.necessite_cotisation && (
               <>
-                <Button onClick={() => setShowRecordModal(true)} className="flex items-center gap-2 bg-green-600">
-                  <Plus size={18} />
-                  Enregistrer cotisation
+                <Button onClick={() => setShowRecordModal(true)} className="flex items-center gap-1 sm:gap-2 bg-green-600 text-xs sm:text-sm">
+                  <Plus size={14} className="sm:w-[18px] sm:h-[18px]" />
+                  <span className="hidden sm:inline">Enregistrer cotisation</span>
+                  <span className="sm:hidden">Cotisation</span>
                 </Button>
-                <Button onClick={() => setShowRecetteModal(true)} className="flex items-center gap-2 bg-blue-600">
-                  <TrendingUp size={18} />
-                  Ajouter recette
+                <Button onClick={() => setShowRecetteModal(true)} className="flex items-center gap-1 sm:gap-2 bg-blue-600 text-xs sm:text-sm">
+                  <TrendingUp size={14} className="sm:w-[18px] sm:h-[18px]" />
+                  <span className="hidden sm:inline">Ajouter recette</span>
+                  <span className="sm:hidden">Recette</span>
                 </Button>
-                <Button onClick={() => setShowDepenseModal(true)} className="flex items-center gap-2 bg-red-600">
-                  <TrendingDown size={18} />
-                  Ajouter dépense
+                <Button onClick={() => setShowDepenseModal(true)} className="flex items-center gap-1 sm:gap-2 bg-red-600 text-xs sm:text-sm">
+                  <TrendingDown size={14} className="sm:w-[18px] sm:h-[18px]" />
+                  <span className="hidden sm:inline">Ajouter dépense</span>
+                  <span className="sm:hidden">Dépense</span>
                 </Button>
-                <Button onClick={handleExportCotisations} className="flex items-center gap-2 bg-slate-600">
-                  <Download size={18} />
-                  Export Cotisations
+                <Button onClick={handleExportCotisations} className="flex items-center gap-1 sm:gap-2 bg-slate-600 text-xs sm:text-sm">
+                  <Download size={14} className="sm:w-[18px] sm:h-[18px]" />
+                  <span className="hidden md:inline">Export Cotisations</span>
+                  <span className="md:hidden">Export</span>
                 </Button>
-                <Button onClick={handleExportDepenses} className="flex items-center gap-2 bg-slate-600">
-                  <Download size={18} />
-                  Export Dépenses
+                <Button onClick={handleExportDepenses} className="flex items-center gap-1 sm:gap-2 bg-slate-600 text-xs sm:text-sm">
+                  <Download size={14} className="sm:w-[18px] sm:h-[18px]" />
+                  <span className="hidden md:inline">Export Dépenses</span>
+                  <span className="md:hidden">Dép.</span>
                 </Button>
               </>
             )}
@@ -399,36 +405,36 @@ export const Cotisations = () => {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6 border-b overflow-x-auto">
+        <div className="flex gap-1 sm:gap-2 mb-6 border-b overflow-x-auto pb-1">
           <button
             onClick={() => setActiveTab('bilan')}
-            className={`px-6 py-3 font-semibold whitespace-nowrap flex items-center gap-2 ${activeTab === 'bilan' ? 'border-b-2 border-blue-600 text-blue-700' : 'text-slate-600'}`}
+            className={`px-3 sm:px-6 py-2 sm:py-3 font-semibold whitespace-nowrap flex items-center gap-1 sm:gap-2 text-sm sm:text-base ${activeTab === 'bilan' ? 'border-b-2 border-blue-600 text-blue-700' : 'text-slate-600'}`}
           >
-            <Wallet size={18} />
+            <Wallet size={16} className="sm:w-[18px] sm:h-[18px]" />
             Bilan
           </button>
           {ceremonie?.necessite_cotisation && (
             <button
               onClick={() => setActiveTab('cotisations')}
-              className={`px-6 py-3 font-semibold whitespace-nowrap flex items-center gap-2 ${activeTab === 'cotisations' ? 'border-b-2 border-blue-600 text-blue-700' : 'text-slate-600'}`}
+              className={`px-3 sm:px-6 py-2 sm:py-3 font-semibold whitespace-nowrap flex items-center gap-1 sm:gap-2 text-sm sm:text-base ${activeTab === 'cotisations' ? 'border-b-2 border-blue-600 text-blue-700' : 'text-slate-600'}`}
             >
-              <DollarSign size={18} />
-              Cotisations ({cotisations.length})
+              <DollarSign size={16} className="sm:w-[18px] sm:h-[18px]" />
+              <span className="hidden sm:inline">Cotisations</span> ({cotisations.length})
             </button>
           )}
           <button
             onClick={() => setActiveTab('recettes')}
-            className={`px-6 py-3 font-semibold whitespace-nowrap flex items-center gap-2 ${activeTab === 'recettes' ? 'border-b-2 border-blue-600 text-blue-700' : 'text-slate-600'}`}
+            className={`px-3 sm:px-6 py-2 sm:py-3 font-semibold whitespace-nowrap flex items-center gap-1 sm:gap-2 text-sm sm:text-base ${activeTab === 'recettes' ? 'border-b-2 border-blue-600 text-blue-700' : 'text-slate-600'}`}
           >
-            <TrendingUp size={18} />
-            Recettes ({recettes.length})
+            <TrendingUp size={16} className="sm:w-[18px] sm:h-[18px]" />
+            <span className="hidden sm:inline">Recettes</span> ({recettes.length})
           </button>
           <button
             onClick={() => setActiveTab('depenses')}
-            className={`px-6 py-3 font-semibold whitespace-nowrap flex items-center gap-2 ${activeTab === 'depenses' ? 'border-b-2 border-blue-600 text-blue-700' : 'text-slate-600'}`}
+            className={`px-3 sm:px-6 py-2 sm:py-3 font-semibold whitespace-nowrap flex items-center gap-1 sm:gap-2 text-sm sm:text-base ${activeTab === 'depenses' ? 'border-b-2 border-blue-600 text-blue-700' : 'text-slate-600'}`}
           >
-            <TrendingDown size={18} />
-            Dépenses ({depenses.length})
+            <TrendingDown size={16} className="sm:w-[18px] sm:h-[18px]" />
+            <span className="hidden sm:inline">Dépenses</span> ({depenses.length})
           </button>
         </div>
 
