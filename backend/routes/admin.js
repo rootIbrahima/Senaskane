@@ -235,6 +235,63 @@ router.post('/run-cotisation-migration', authenticateToken, requireAdmin, async 
 });
 
 /**
+ * POST /admin/cleanup-cotisation-data
+ * Nettoyer les données de cotisation pour permettre une nouvelle activation
+ */
+router.post('/cleanup-cotisation-data', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const familleId = req.user.familleId;
+        const results = [];
+
+        // 1. Supprimer les entrées de tresorier_ceremonie pour cette famille
+        const [tresorierResult] = await db.execute(`
+            DELETE tc FROM tresorier_ceremonie tc
+            INNER JOIN ceremonie c ON tc.ceremonie_id = c.id
+            WHERE c.famille_id = ?
+        `, [familleId]);
+        results.push({ table: 'tresorier_ceremonie', deleted: tresorierResult.affectedRows });
+
+        // 2. Supprimer les cotisations pour cette famille
+        const [cotisationResult] = await db.execute(`
+            DELETE cc FROM cotisation_ceremonie cc
+            INNER JOIN ceremonie c ON cc.ceremonie_id = c.id
+            WHERE c.famille_id = ?
+        `, [familleId]);
+        results.push({ table: 'cotisation_ceremonie', deleted: cotisationResult.affectedRows });
+
+        // 3. Réinitialiser les flags de cotisation sur les cérémonies
+        const [ceremonieResult] = await db.execute(`
+            UPDATE ceremonie
+            SET necessite_cotisation = 0, montant_cotisation = 0
+            WHERE famille_id = ?
+        `, [familleId]);
+        results.push({ table: 'ceremonie', updated: ceremonieResult.affectedRows });
+
+        // 4. Supprimer les utilisateurs trésoriers créés pour cette famille
+        const [utilisateurResult] = await db.execute(`
+            DELETE FROM utilisateur
+            WHERE famille_id = ? AND role = 'tresorier'
+        `, [familleId]);
+        results.push({ table: 'utilisateur (tresoriers)', deleted: utilisateurResult.affectedRows });
+
+        console.log('✅ Nettoyage des données de cotisation terminé:', results);
+
+        res.json({
+            success: true,
+            message: 'Données de cotisation nettoyées avec succès',
+            results
+        });
+
+    } catch (error) {
+        console.error('❌ Erreur nettoyage:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
  * GET /admin/check-tables
  * Vérifier quelles tables existent
  */
