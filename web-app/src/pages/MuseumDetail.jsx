@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { museeAPI, membresAPI } from '../services/api';
+import { museeAPI, membresAPI, UPLOADS_URL } from '../services/api';
 import { Loading } from '../components';
 import { useAuth } from '../contexts/AuthContext';
 import { ArrowLeft, Edit2, Trash2, User, Users, Calendar, ImageIcon, X } from 'lucide-react';
@@ -171,7 +171,7 @@ export const MuseumDetail = () => {
             <div className="relative bg-gradient-to-br from-slate-100 to-slate-200 aspect-square lg:aspect-auto">
               {objet.image_url ? (
                 <img
-                  src={`http://localhost:3000/uploads/musee/${objet.image_url}`}
+                  src={`${UPLOADS_URL}/uploads/musee/${objet.image_url}`}
                   alt={objet.nom_objet}
                   className="w-full h-full object-cover"
                 />

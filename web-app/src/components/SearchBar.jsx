@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { rechercheAPI } from '../services/api';
+import { rechercheAPI, UPLOADS_URL } from '../services/api';
 import { Search, X, User, Cake, Briefcase, Loader2, CheckCircle } from 'lucide-react';
 
 export const SearchBar = () => {
@@ -132,7 +132,7 @@ export const SearchBar = () => {
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-200 bg-gradient-to-br from-slate-600 to-slate-800">
                     {membre.photo ? (
                       <img
-                        src={`http://localhost:3000/uploads/photos/${membre.photo}`}
+                        src={`${UPLOADS_URL}/uploads/photos/${membre.photo}`}
                         alt={`${membre.prenom} ${membre.nom}`}
                         className="w-full h-full rounded-xl object-cover"
                       />

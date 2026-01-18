@@ -3,6 +3,9 @@ import axios from 'axios';
 // URL de l'API - Utilise la variable d'environnement en production
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
+// URL de base pour les uploads (sans /api)
+export const UPLOADS_URL = API_URL.replace('/api', '');
+
 const api = axios.create({
   baseURL: API_URL,
   headers: {

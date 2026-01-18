@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { familleAPI, authAPI } from '../services/api';
+import { familleAPI, authAPI, UPLOADS_URL } from '../services/api';
 import { Card, Loading, Button, Input } from '../components';
 import { useAuth } from '../contexts/AuthContext';
 import { Copy, Check, Key, Share2 } from 'lucide-react';
@@ -259,7 +259,7 @@ export const FamilyInfo = () => {
                   <h3 className="text-lg font-bold mb-4">Logo de la famille</h3>
                   {famille?.logo && (
                     <img
-                      src={`http://localhost:3000/uploads/logos/${famille.logo}`}
+                      src={`${UPLOADS_URL}/uploads/logos/${famille.logo}`}
                       alt="Logo famille"
                       className="w-32 h-32 object-cover rounded-lg mb-4"
                     />

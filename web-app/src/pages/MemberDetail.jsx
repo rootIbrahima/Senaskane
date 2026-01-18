@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { membresAPI } from '../services/api';
+import { membresAPI, UPLOADS_URL } from '../services/api';
 import { Card, Loading, Button, Input } from '../components';
 import { useAuth } from '../contexts/AuthContext';
 import { X } from 'lucide-react';
@@ -108,7 +108,7 @@ export const MemberDetail = () => {
   if (loading) return <Loading text="Chargement..." />;
   if (!membre) return <div className="text-center py-12">Membre non trouvé</div>;
 
-  const photoUrl = membre.photo ? `http://localhost:3000/uploads/photos/${membre.photo}` : null;
+  const photoUrl = membre.photo ? `${UPLOADS_URL}/uploads/photos/${membre.photo}` : null;
 
   return (
     <div className="min-h-screen bg-slate-50">

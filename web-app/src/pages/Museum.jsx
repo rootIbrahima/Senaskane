@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { museeAPI, membresAPI } from '../services/api';
+import { museeAPI, membresAPI, UPLOADS_URL } from '../services/api';
 import { Loading } from '../components';
 import { useAuth } from '../contexts/AuthContext';
 import { Building2, Upload, ImageIcon, Trash2, X, User, Users } from 'lucide-react';
@@ -226,8 +226,8 @@ export const Museum = () => {
               <div className="aspect-video bg-gradient-to-br from-slate-100 to-slate-200 relative overflow-hidden">
                 {objet.image_url ? (
                   <img
-                    src={`http://localhost:3000/uploads/musee/${objet.image_url}`}
-                    alt={objet.nom}
+                    src={`${UPLOADS_URL}/uploads/musee/${objet.image_url}`}
+                    alt={objet.nom_objet || objet.nom}
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       e.target.style.display = 'none';
