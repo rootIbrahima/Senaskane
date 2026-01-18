@@ -46,6 +46,8 @@ const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:5174',
     'https://senaskane.onrender.com',
+    'https://senaskane.vercel.app',
+    'https://www.senaskane.vercel.app',
     'exp://localhost:8081',
 ];
 
