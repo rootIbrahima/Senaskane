@@ -47,6 +47,30 @@ router.post('/activer', authenticateToken, requireAdmin, [
 
         const membre = membres[0];
 
+        // Vérifier si un trésorier existe déjà pour cette cérémonie
+        const [existingTresorier] = await db.execute(
+            'SELECT id, utilisateur_id FROM tresorier_ceremonie WHERE ceremonie_id = ?',
+            [ceremonieId]
+        );
+
+        if (existingTresorier.length > 0) {
+            return res.status(400).json({
+                error: 'Un trésorier existe déjà pour cette cérémonie. Veuillez d\'abord le supprimer si vous souhaitez en désigner un nouveau.'
+            });
+        }
+
+        // Vérifier si les cotisations sont déjà activées
+        const [ceremonieCheck] = await db.execute(
+            'SELECT necessite_cotisation FROM ceremonie WHERE id = ?',
+            [ceremonieId]
+        );
+
+        if (ceremonieCheck.length > 0 && ceremonieCheck[0].necessite_cotisation) {
+            return res.status(400).json({
+                error: 'Les cotisations sont déjà activées pour cette cérémonie.'
+            });
+        }
+
         // Créer le compte trésorier
         const tresorier = await CotisationService.creerTresorier(
             ceremonieId,

@@ -72,7 +72,10 @@ router.post('/', authenticateToken, requireAdmin, upload.single('image'), async 
         const nomObjet = req.body.nom || req.body.nom_objet || req.body.nomObjet;
         const description = req.body.description || null;
         const proprietaireId = req.body.proprietaire_id || req.body.proprietaireId || null;
-        const estCommun = req.body.est_commun || req.body.estCommun || false;
+
+        // Convertir est_commun en booléen puis en entier pour MySQL
+        const estCommunRaw = req.body.est_commun || req.body.estCommun;
+        const estCommun = estCommunRaw === true || estCommunRaw === 'true' || estCommunRaw === '1' ? 1 : 0;
 
         // Validation
         if (!nomObjet) {
@@ -115,15 +118,19 @@ router.post('/ajouter', authenticateToken, requireAdmin, upload.single('image'),
         }
 
         const familleId = req.user.familleId;
-        const { nomObjet, description, proprietaireId, estCommun } = req.body;
+        const { nomObjet, description, proprietaireId } = req.body;
+
+        // Convertir estCommun en entier pour MySQL
+        const estCommunRaw = req.body.estCommun || req.body.est_commun;
+        const estCommun = estCommunRaw === true || estCommunRaw === 'true' || estCommunRaw === '1' ? 1 : 0;
 
         const imageUrl = req.file ? req.file.filename : null;
 
         const [result] = await db.execute(
-            `INSERT INTO musee_familial 
-            (famille_id, nom_objet, description, image_url, proprietaire_id, est_commun) 
+            `INSERT INTO musee_familial
+            (famille_id, nom_objet, description, image_url, proprietaire_id, est_commun)
             VALUES (?, ?, ?, ?, ?, ?)`,
-            [familleId, nomObjet, description, imageUrl, proprietaireId || null, estCommun || false]
+            [familleId, nomObjet, description, imageUrl, proprietaireId || null, estCommun]
         );
 
         res.status(201).json({
