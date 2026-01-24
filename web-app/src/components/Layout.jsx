@@ -58,7 +58,7 @@ export const Layout = ({ children }) => {
                     className="w-8 h-8 lg:w-10 lg:h-10 object-contain"
                   />
                   <div>
-                    <h1 className="text-lg lg:text-xl font-bold leading-tight">Baïla Généa</h1>
+                    <h1 className="text-lg lg:text-xl font-bold leading-tight">Baïla Généa v2.1</h1>
                     <p className="text-[10px] lg:text-xs text-slate-300 leading-tight flex items-center gap-1">
                       {famille ? (
                         <>
