@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { SearchBar } from './SearchBar';
 import { Sidebar } from './Sidebar';
@@ -8,6 +9,15 @@ export const Layout = ({ children }) => {
   const { user, famille, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const navigate = useNavigate();
+
+  // Boutons sponsors
+  const sponsorButtons = [
+    { id: 1, label: '1', color: 'from-amber-500 to-orange-600' },
+    { id: 2, label: '2', color: 'from-emerald-500 to-teal-600' },
+    { id: 3, label: '3', color: 'from-blue-500 to-indigo-600' },
+    { id: 4, label: '4', color: 'from-purple-500 to-pink-600' },
+  ];
 
   const handleLogout = () => {
     if (window.confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
@@ -41,7 +51,7 @@ export const Layout = ({ children }) => {
         <header className="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 text-white shadow-2xl sticky top-0 z-20 backdrop-blur-lg bg-opacity-95">
           <div className="max-w-7xl mx-auto px-4 lg:px-8 py-4 lg:py-8">
             <div className="flex items-center justify-between gap-4">
-              {/* Menu hamburger (mobile) + Logo */}
+              {/* Menu hamburger (mobile) + Logo + Sponsors */}
               <div className="flex items-center gap-3 lg:gap-4">
                 <button
                   onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -68,6 +78,20 @@ export const Layout = ({ children }) => {
                       )}
                     </p>
                   </div>
+                </div>
+
+                {/* Boutons Sponsors */}
+                <div className="hidden sm:flex items-center gap-1.5 ml-2 lg:ml-4">
+                  {sponsorButtons.map((sponsor) => (
+                    <button
+                      key={sponsor.id}
+                      onClick={() => navigate(`/sponsor/${sponsor.id}`)}
+                      className={`w-8 h-8 lg:w-9 lg:h-9 rounded-lg bg-gradient-to-br ${sponsor.color} text-white font-bold text-sm shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-300 flex items-center justify-center border-2 border-white/30`}
+                      title={`Sponsor ${sponsor.id}`}
+                    >
+                      {sponsor.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 

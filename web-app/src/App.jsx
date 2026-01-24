@@ -17,6 +17,7 @@ const Ceremonies = lazy(() => import('./pages/Ceremonies').then(m => ({ default:
 const Cotisations = lazy(() => import('./pages/Cotisations').then(m => ({ default: m.Cotisations })));
 const FamilyInfo = lazy(() => import('./pages/FamilyInfo').then(m => ({ default: m.FamilyInfo })));
 const AdvancedSearch = lazy(() => import('./pages/AdvancedSearch').then(m => ({ default: m.AdvancedSearch })));
+const Sponsor = lazy(() => import('./pages/Sponsor').then(m => ({ default: m.Sponsor })));
 
 // Route protégée avec Layout
 const ProtectedRoute = ({ children }) => {
@@ -111,6 +112,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AdvancedSearch />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/sponsor/:id"
+        element={
+          <ProtectedRoute>
+            <Sponsor />
           </ProtectedRoute>
         }
       />
