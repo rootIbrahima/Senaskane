@@ -11,14 +11,6 @@ export const Layout = ({ children }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const navigate = useNavigate();
 
-  // Boutons sponsors
-  const sponsorButtons = [
-    { id: 1, label: '1', color: 'bg-amber-500 hover:bg-amber-600' },
-    { id: 2, label: '2', color: 'bg-emerald-500 hover:bg-emerald-600' },
-    { id: 3, label: '3', color: 'bg-blue-500 hover:bg-blue-600' },
-    { id: 4, label: '4', color: 'bg-purple-500 hover:bg-purple-600' },
-  ];
-
   const handleLogout = () => {
     if (window.confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
       logout();
@@ -81,17 +73,11 @@ export const Layout = ({ children }) => {
                 </div>
 
                 {/* Boutons Sponsors - Desktop */}
-                <div className="hidden sm:flex items-center gap-1 ml-3">
-                  {sponsorButtons.map((sponsor) => (
-                    <button
-                      key={sponsor.id}
-                      onClick={() => navigate(`/sponsor/${sponsor.id}`)}
-                      className={`w-7 h-7 lg:w-8 lg:h-8 rounded ${sponsor.color} text-white font-bold text-xs lg:text-sm transition-all duration-200 flex items-center justify-center shadow-md`}
-                      title={`Sponsor ${sponsor.id}`}
-                    >
-                      {sponsor.label}
-                    </button>
-                  ))}
+                <div className="hidden sm:flex items-center gap-1.5 ml-3">
+                  <button onClick={() => navigate('/sponsor/1')} className="w-7 h-7 lg:w-8 lg:h-8 rounded bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs lg:text-sm shadow-md flex items-center justify-center">1</button>
+                  <button onClick={() => navigate('/sponsor/2')} className="w-7 h-7 lg:w-8 lg:h-8 rounded bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs lg:text-sm shadow-md flex items-center justify-center">2</button>
+                  <button onClick={() => navigate('/sponsor/3')} className="w-7 h-7 lg:w-8 lg:h-8 rounded bg-blue-500 hover:bg-blue-600 text-white font-bold text-xs lg:text-sm shadow-md flex items-center justify-center">3</button>
+                  <button onClick={() => navigate('/sponsor/4')} className="w-7 h-7 lg:w-8 lg:h-8 rounded bg-purple-500 hover:bg-purple-600 text-white font-bold text-xs lg:text-sm shadow-md flex items-center justify-center">4</button>
                 </div>
               </div>
 
@@ -112,16 +98,10 @@ export const Layout = ({ children }) => {
 
             {/* Boutons Sponsors - Mobile */}
             <div className="flex sm:hidden items-center justify-center gap-2 mt-3">
-              {sponsorButtons.map((sponsor) => (
-                <button
-                  key={sponsor.id}
-                  onClick={() => navigate(`/sponsor/${sponsor.id}`)}
-                  className={`w-9 h-9 rounded ${sponsor.color} text-white font-bold text-sm transition-all duration-200 flex items-center justify-center shadow-md`}
-                  title={`Sponsor ${sponsor.id}`}
-                >
-                  {sponsor.label}
-                </button>
-              ))}
+              <button onClick={() => navigate('/sponsor/1')} className="w-10 h-10 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-base shadow-lg flex items-center justify-center">1</button>
+              <button onClick={() => navigate('/sponsor/2')} className="w-10 h-10 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-base shadow-lg flex items-center justify-center">2</button>
+              <button onClick={() => navigate('/sponsor/3')} className="w-10 h-10 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-bold text-base shadow-lg flex items-center justify-center">3</button>
+              <button onClick={() => navigate('/sponsor/4')} className="w-10 h-10 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-bold text-base shadow-lg flex items-center justify-center">4</button>
             </div>
 
             {/* Barre de recherche mobile */}
