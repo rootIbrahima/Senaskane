@@ -51,7 +51,7 @@ export const Layout = ({ children }) => {
         <header className="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 text-white shadow-2xl sticky top-0 z-20 backdrop-blur-lg bg-opacity-95">
           <div className="max-w-7xl mx-auto px-4 lg:px-8 py-4 lg:py-8">
             <div className="flex items-center justify-between gap-4">
-              {/* Menu hamburger (mobile) + Logo + Sponsors */}
+              {/* Menu hamburger (mobile) + Logo */}
               <div className="flex items-center gap-3 lg:gap-4">
                 <button
                   onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -80,13 +80,13 @@ export const Layout = ({ children }) => {
                   </div>
                 </div>
 
-                {/* Boutons Sponsors */}
-                <div className="flex items-center gap-1 ml-1 lg:ml-3">
+                {/* Boutons Sponsors - Desktop */}
+                <div className="hidden sm:flex items-center gap-1 ml-3">
                   {sponsorButtons.map((sponsor) => (
                     <button
                       key={sponsor.id}
                       onClick={() => navigate(`/sponsor/${sponsor.id}`)}
-                      className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 rounded bg-white text-slate-800 font-bold text-[10px] sm:text-xs lg:text-sm transition-all duration-200 flex items-center justify-center shadow-md hover:bg-slate-100"
+                      className="w-7 h-7 lg:w-8 lg:h-8 rounded bg-white text-slate-800 font-bold text-xs lg:text-sm transition-all duration-200 flex items-center justify-center shadow-md hover:bg-slate-100"
                       title={`Sponsor ${sponsor.id}`}
                     >
                       {sponsor.label}
@@ -108,6 +108,20 @@ export const Layout = ({ children }) => {
                 <LogOut className="w-5 h-5" strokeWidth={2} />
                 <span className="hidden sm:inline">Déconnexion</span>
               </button>
+            </div>
+
+            {/* Boutons Sponsors - Mobile */}
+            <div className="flex sm:hidden items-center justify-center gap-2 mt-3">
+              {sponsorButtons.map((sponsor) => (
+                <button
+                  key={sponsor.id}
+                  onClick={() => navigate(`/sponsor/${sponsor.id}`)}
+                  className="w-8 h-8 rounded bg-white text-slate-800 font-bold text-sm transition-all duration-200 flex items-center justify-center shadow-md hover:bg-slate-100"
+                  title={`Sponsor ${sponsor.id}`}
+                >
+                  {sponsor.label}
+                </button>
+              ))}
             </div>
 
             {/* Barre de recherche mobile */}
