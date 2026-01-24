@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { SearchBar } from './SearchBar';
 import { Sidebar } from './Sidebar';
-import { Menu, X, LogOut, BookOpen, Users } from 'lucide-react';
+import { Menu, X, LogOut, Users } from 'lucide-react';
 
 export const Layout = ({ children }) => {
   const { user, famille, logout } = useAuth();
@@ -13,10 +13,10 @@ export const Layout = ({ children }) => {
 
   // Boutons sponsors
   const sponsorButtons = [
-    { id: 1, label: '1', color: 'from-amber-500 to-orange-600' },
-    { id: 2, label: '2', color: 'from-emerald-500 to-teal-600' },
-    { id: 3, label: '3', color: 'from-blue-500 to-indigo-600' },
-    { id: 4, label: '4', color: 'from-purple-500 to-pink-600' },
+    { id: 1, label: '1' },
+    { id: 2, label: '2' },
+    { id: 3, label: '3' },
+    { id: 4, label: '4' },
   ];
 
   const handleLogout = () => {
@@ -81,12 +81,12 @@ export const Layout = ({ children }) => {
                 </div>
 
                 {/* Boutons Sponsors */}
-                <div className="hidden sm:flex items-center gap-1.5 ml-2 lg:ml-4">
+                <div className="flex items-center gap-1 ml-2 lg:ml-4">
                   {sponsorButtons.map((sponsor) => (
                     <button
                       key={sponsor.id}
                       onClick={() => navigate(`/sponsor/${sponsor.id}`)}
-                      className={`w-8 h-8 lg:w-9 lg:h-9 rounded-lg bg-gradient-to-br ${sponsor.color} text-white font-bold text-sm shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-300 flex items-center justify-center border-2 border-white/30`}
+                      className="w-7 h-7 lg:w-8 lg:h-8 rounded-md bg-white/20 hover:bg-white/30 text-white font-bold text-xs lg:text-sm transition-all duration-200 flex items-center justify-center border border-white/40"
                       title={`Sponsor ${sponsor.id}`}
                     >
                       {sponsor.label}
