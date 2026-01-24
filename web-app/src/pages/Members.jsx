@@ -22,6 +22,7 @@ export const Members = () => {
     sexe: 'M',
     date_naissance: '',
     lieu_naissance: '',
+    lieu_residence: '',
     profession: '',
     telephone: '',
     email: ''
@@ -61,6 +62,7 @@ export const Members = () => {
         sexe: 'M',
         date_naissance: '',
         lieu_naissance: '',
+        lieu_residence: '',
         profession: '',
         telephone: '',
         email: ''
@@ -570,6 +572,13 @@ export const Members = () => {
                   name="lieu_naissance"
                   value={formData.lieu_naissance}
                   onChange={handleChange}
+                />
+                <Input
+                  label="Lieu de résidence"
+                  name="lieu_residence"
+                  value={formData.lieu_residence}
+                  onChange={handleChange}
+                  placeholder="Ville, Pays"
                 />
                 <Input
                   label="Profession"
