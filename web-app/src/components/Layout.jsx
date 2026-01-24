@@ -13,10 +13,10 @@ export const Layout = ({ children }) => {
 
   // Boutons sponsors
   const sponsorButtons = [
-    { id: 1, label: '1' },
-    { id: 2, label: '2' },
-    { id: 3, label: '3' },
-    { id: 4, label: '4' },
+    { id: 1, label: '1', color: 'bg-amber-500 hover:bg-amber-600' },
+    { id: 2, label: '2', color: 'bg-emerald-500 hover:bg-emerald-600' },
+    { id: 3, label: '3', color: 'bg-blue-500 hover:bg-blue-600' },
+    { id: 4, label: '4', color: 'bg-purple-500 hover:bg-purple-600' },
   ];
 
   const handleLogout = () => {
@@ -86,7 +86,7 @@ export const Layout = ({ children }) => {
                     <button
                       key={sponsor.id}
                       onClick={() => navigate(`/sponsor/${sponsor.id}`)}
-                      className="w-7 h-7 lg:w-8 lg:h-8 rounded bg-white text-slate-800 font-bold text-xs lg:text-sm transition-all duration-200 flex items-center justify-center shadow-md hover:bg-slate-100"
+                      className={`w-7 h-7 lg:w-8 lg:h-8 rounded ${sponsor.color} text-white font-bold text-xs lg:text-sm transition-all duration-200 flex items-center justify-center shadow-md`}
                       title={`Sponsor ${sponsor.id}`}
                     >
                       {sponsor.label}
@@ -116,7 +116,7 @@ export const Layout = ({ children }) => {
                 <button
                   key={sponsor.id}
                   onClick={() => navigate(`/sponsor/${sponsor.id}`)}
-                  className="w-8 h-8 rounded bg-white text-slate-800 font-bold text-sm transition-all duration-200 flex items-center justify-center shadow-md hover:bg-slate-100"
+                  className={`w-9 h-9 rounded ${sponsor.color} text-white font-bold text-sm transition-all duration-200 flex items-center justify-center shadow-md`}
                   title={`Sponsor ${sponsor.id}`}
                 >
                   {sponsor.label}
