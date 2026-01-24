@@ -127,7 +127,7 @@ export const Layout = ({ children }) => {
                 <span className="text-rose-500 animate-pulse">❤️</span>
                 <span>by Baïla Team</span>
               </div>
-              <div className="text-slate-500">© 2024 Tous droits réservés</div>
+              <div className="text-slate-500">© 2024 Tous droits réservés | v2.1</div>
             </div>
           </div>
         </footer>
