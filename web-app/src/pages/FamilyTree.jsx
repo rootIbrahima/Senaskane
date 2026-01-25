@@ -343,40 +343,53 @@ export const FamilyTree = () => {
     const allParentIds = getAllParentIds();
     setExpandedNodes(allParentIds);
 
-    // Attendre que le DOM se mette à jour
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Attendre que le DOM se mette à jour complètement
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     try {
-      // Ajouter une classe temporaire pour le style d'export
-      treeRef.current.classList.add('exporting');
+      const element = treeRef.current;
 
-      // Attendre encore un peu pour le rendu complet
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Calculer les dimensions réelles de l'élément
+      const rect = element.getBoundingClientRect();
+      const scrollWidth = element.scrollWidth;
+      const scrollHeight = element.scrollHeight;
 
-      const canvas = await html2canvas(treeRef.current, {
+      // Utiliser les dimensions les plus grandes
+      const captureWidth = Math.max(rect.width, scrollWidth, 1200);
+      const captureHeight = Math.max(rect.height, scrollHeight, 800);
+
+      const canvas = await html2canvas(element, {
         backgroundColor: '#ffffff',
-        scale: 2,
+        scale: 1.5,
         logging: false,
         useCORS: true,
         allowTaint: true,
-        windowWidth: treeRef.current.scrollWidth + 100,
-        windowHeight: treeRef.current.scrollHeight + 100,
-        width: treeRef.current.scrollWidth,
-        height: treeRef.current.scrollHeight,
-        x: 0,
-        y: 0,
+        width: captureWidth,
+        height: captureHeight,
+        windowWidth: captureWidth + 200,
+        windowHeight: captureHeight + 200,
         scrollX: 0,
         scrollY: 0,
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.querySelector('[data-tree-export]');
-          if (clonedElement) {
-            clonedElement.style.overflow = 'visible';
+        x: 0,
+        y: 0,
+        foreignObjectRendering: false,
+        removeContainer: true,
+        onclone: (clonedDoc, clonedElement) => {
+          // S'assurer que le clone est visible entièrement
+          clonedElement.style.overflow = 'visible';
+          clonedElement.style.position = 'relative';
+          clonedElement.style.width = captureWidth + 'px';
+          clonedElement.style.height = 'auto';
+          clonedElement.style.minHeight = captureHeight + 'px';
+
+          // Rendre tous les parents visibles aussi
+          let parent = clonedElement.parentElement;
+          while (parent) {
+            parent.style.overflow = 'visible';
+            parent = parent.parentElement;
           }
         }
       });
-
-      // Retirer la classe temporaire
-      treeRef.current.classList.remove('exporting');
 
       const link = document.createElement('a');
       link.download = `arbre-genealogique-${new Date().toISOString().split('T')[0]}.png`;
@@ -387,11 +400,7 @@ export const FamilyTree = () => {
       setExpandedNodes(previousExpandedNodes);
     } catch (error) {
       console.error('Erreur téléchargement arbre:', error);
-      alert('Erreur lors du téléchargement de l\'arbre');
-      // S'assurer de retirer la classe en cas d'erreur
-      if (treeRef.current) {
-        treeRef.current.classList.remove('exporting');
-      }
+      alert('Erreur lors du téléchargement de l\'arbre. Essayez de réduire le nombre de nœuds développés.');
       // Restaurer l'état précédent
       setExpandedNodes(previousExpandedNodes);
     } finally {
@@ -712,8 +721,8 @@ export const FamilyTree = () => {
           </div>
         ) : (
           // Vue Arbre généalogique - Structure hiérarchique
-          <div className="overflow-x-auto overflow-y-visible pb-8 -mx-4 px-4 sm:mx-0 sm:px-0">
-            <div className="inline-block min-w-full px-2 sm:px-8">
+          <div id="tree-scroll-container" className="overflow-x-auto overflow-y-visible pb-8 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <div className="inline-block px-2 sm:px-8" style={{ minWidth: 'max-content' }}>
               {(() => {
                 // Trouver les racines de l'arbre (membres sans parents)
                 const racines = arbre.membres.filter(m => {
