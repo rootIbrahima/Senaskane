@@ -305,21 +305,39 @@ export const FamilyTree = () => {
 
     setDownloading(true);
     try {
+      // Ajouter une classe temporaire pour le style d'export
+      treeRef.current.classList.add('exporting');
+
       const canvas = await html2canvas(treeRef.current, {
-        backgroundColor: '#f8fafc',
-        scale: 2,
+        backgroundColor: '#ffffff',
+        scale: 3,
         logging: false,
         useCORS: true,
-        allowTaint: true
+        allowTaint: true,
+        windowWidth: treeRef.current.scrollWidth,
+        windowHeight: treeRef.current.scrollHeight,
+        width: treeRef.current.scrollWidth,
+        height: treeRef.current.scrollHeight,
+        x: 0,
+        y: 0,
+        scrollX: 0,
+        scrollY: 0
       });
+
+      // Retirer la classe temporaire
+      treeRef.current.classList.remove('exporting');
 
       const link = document.createElement('a');
       link.download = `arbre-genealogique-${new Date().toISOString().split('T')[0]}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.href = canvas.toDataURL('image/png', 1.0);
       link.click();
     } catch (error) {
       console.error('Erreur téléchargement arbre:', error);
       alert('Erreur lors du téléchargement de l\'arbre');
+      // S'assurer de retirer la classe en cas d'erreur
+      if (treeRef.current) {
+        treeRef.current.classList.remove('exporting');
+      }
     } finally {
       setDownloading(false);
     }
@@ -661,7 +679,7 @@ export const FamilyTree = () => {
                 }
 
                 return (
-                  <div ref={treeRef} className="py-8">
+                  <div ref={treeRef} className="py-8 px-4 bg-white rounded-xl" style={{ minWidth: 'fit-content' }}>
                     <div className="text-center mb-8">
                       <h3 className="text-xl font-bold text-slate-800 mb-2">Arbre Généalogique</h3>
                       <p className="text-sm text-slate-600">
