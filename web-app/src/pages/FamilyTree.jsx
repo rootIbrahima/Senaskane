@@ -332,6 +332,43 @@ export const FamilyTree = () => {
     setExpandedNodes(allParentIds);
   };
 
+  // Fonction utilitaire pour préparer l'élément avant capture
+  const prepareElementForCapture = (clonedDoc) => {
+    // Trouver le conteneur de l'arbre dans le clone
+    const treeContainer = clonedDoc.querySelector('[data-tree-export="true"]');
+    if (!treeContainer) return;
+
+    // Forcer l'affichage complet
+    treeContainer.style.overflow = 'visible';
+    treeContainer.style.position = 'relative';
+    treeContainer.style.width = 'auto';
+    treeContainer.style.height = 'auto';
+    treeContainer.style.minWidth = 'max-content';
+    treeContainer.style.maxWidth = 'none';
+
+    // Parcourir tous les enfants
+    const allElements = treeContainer.querySelectorAll('*');
+    allElements.forEach(el => {
+      if (el.style) {
+        el.style.overflow = 'visible';
+      }
+    });
+
+    // Remonter dans les parents et forcer overflow visible
+    let parent = treeContainer.parentElement;
+    while (parent && parent !== clonedDoc.body) {
+      parent.style.overflow = 'visible';
+      parent.style.maxWidth = 'none';
+      parent.style.width = 'auto';
+      parent = parent.parentElement;
+    }
+
+    // Forcer aussi le body
+    clonedDoc.body.style.overflow = 'visible';
+    clonedDoc.body.style.width = 'auto';
+    clonedDoc.body.style.maxWidth = 'none';
+  };
+
   const downloadTree = async () => {
     if (!treeRef.current) return;
 
@@ -344,20 +381,54 @@ export const FamilyTree = () => {
     const allParentIds = getAllParentIds();
     setExpandedNodes(allParentIds);
 
-    // Attendre que le DOM se mette à jour complètement
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Attendre que le DOM se mette à jour
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     try {
       const element = treeRef.current;
 
-      // Calculer les dimensions réelles de l'élément
-      const rect = element.getBoundingClientRect();
-      const scrollWidth = element.scrollWidth;
-      const scrollHeight = element.scrollHeight;
+      const canvas = await html2canvas(element, {
+        backgroundColor: '#ffffff',
+        scale: 1,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        scrollX: -window.scrollX,
+        scrollY: -window.scrollY,
+        onclone: (clonedDoc) => {
+          prepareElementForCapture(clonedDoc);
+        }
+      });
 
-      // Utiliser les dimensions les plus grandes
-      const captureWidth = Math.max(rect.width, scrollWidth, 1200);
-      const captureHeight = Math.max(rect.height, scrollHeight, 800);
+      const link = document.createElement('a');
+      link.download = `arbre-genealogique-${new Date().toISOString().split('T')[0]}.png`;
+      link.href = canvas.toDataURL('image/png', 0.95);
+      link.click();
+
+      setExpandedNodes(previousExpandedNodes);
+    } catch (error) {
+      console.error('Erreur téléchargement arbre:', error);
+      alert('Erreur lors du téléchargement.');
+      setExpandedNodes(previousExpandedNodes);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  // Fonction pour générer un PDF (une seule page, arbre ajusté)
+  const downloadTreePDF = async () => {
+    if (!treeRef.current) return;
+
+    setDownloading(true);
+
+    const previousExpandedNodes = new Set(expandedNodes);
+    const allParentIds = getAllParentIds();
+    setExpandedNodes(allParentIds);
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    try {
+      const element = treeRef.current;
 
       const canvas = await html2canvas(element, {
         backgroundColor: '#ffffff',
@@ -365,201 +436,55 @@ export const FamilyTree = () => {
         logging: false,
         useCORS: true,
         allowTaint: true,
-        width: captureWidth,
-        height: captureHeight,
-        windowWidth: captureWidth + 200,
-        windowHeight: captureHeight + 200,
-        scrollX: 0,
-        scrollY: 0,
-        x: 0,
-        y: 0,
-        foreignObjectRendering: false,
-        removeContainer: true,
-        onclone: (clonedDoc, clonedElement) => {
-          // S'assurer que le clone est visible entièrement
-          clonedElement.style.overflow = 'visible';
-          clonedElement.style.position = 'relative';
-          clonedElement.style.width = captureWidth + 'px';
-          clonedElement.style.height = 'auto';
-          clonedElement.style.minHeight = captureHeight + 'px';
-
-          // Rendre tous les parents visibles aussi
-          let parent = clonedElement.parentElement;
-          while (parent) {
-            parent.style.overflow = 'visible';
-            parent = parent.parentElement;
-          }
+        scrollX: -window.scrollX,
+        scrollY: -window.scrollY,
+        onclone: (clonedDoc) => {
+          prepareElementForCapture(clonedDoc);
         }
       });
 
-      const link = document.createElement('a');
-      link.download = `arbre-genealogique-${new Date().toISOString().split('T')[0]}.png`;
-      link.href = canvas.toDataURL('image/png', 1.0);
-      link.click();
-
-      // Restaurer l'état précédent des nœuds
-      setExpandedNodes(previousExpandedNodes);
-    } catch (error) {
-      console.error('Erreur téléchargement arbre:', error);
-      alert('Erreur lors du téléchargement de l\'arbre. Essayez de réduire le nombre de nœuds développés.');
-      // Restaurer l'état précédent
-      setExpandedNodes(previousExpandedNodes);
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  // Fonction pour générer un PDF multi-pages
-  const downloadTreePDF = async () => {
-    if (!treeRef.current) return;
-
-    setDownloading(true);
-
-    // Sauvegarder l'état actuel des nœuds développés
-    const previousExpandedNodes = new Set(expandedNodes);
-
-    // Développer tous les nœuds pour la capture
-    const allParentIds = getAllParentIds();
-    setExpandedNodes(allParentIds);
-
-    // Attendre que le DOM se mette à jour
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    try {
-      const element = treeRef.current;
-
-      // Calculer les dimensions réelles
-      const scrollWidth = element.scrollWidth;
-      const scrollHeight = element.scrollHeight;
-
-      // Capturer l'arbre en haute qualité
-      const canvas = await html2canvas(element, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-        width: scrollWidth,
-        height: scrollHeight,
-        windowWidth: scrollWidth + 100,
-        windowHeight: scrollHeight + 100,
-        scrollX: 0,
-        scrollY: 0,
-        onclone: (clonedDoc, clonedElement) => {
-          clonedElement.style.overflow = 'visible';
-          clonedElement.style.position = 'relative';
-          let parent = clonedElement.parentElement;
-          while (parent) {
-            parent.style.overflow = 'visible';
-            parent = parent.parentElement;
-          }
-        }
-      });
-
-      // Créer le PDF
-      const imgData = canvas.toDataURL('image/png', 1.0);
+      const imgData = canvas.toDataURL('image/jpeg', 0.85);
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
 
-      // Format A4 en paysage pour plus d'espace horizontal
-      const pdfWidth = 297; // A4 paysage largeur en mm
-      const pdfHeight = 210; // A4 paysage hauteur en mm
-      const margin = 10; // Marge en mm
+      // Déterminer l'orientation optimale
+      const isLandscape = imgWidth > imgHeight;
+      const orientation = isLandscape ? 'landscape' : 'portrait';
 
-      const usableWidth = pdfWidth - (2 * margin);
-      const usableHeight = pdfHeight - (2 * margin);
+      // Dimensions A4
+      const a4Width = isLandscape ? 297 : 210;
+      const a4Height = isLandscape ? 210 : 297;
+      const margin = 10;
 
-      // Calculer le ratio pour adapter l'image
-      const ratio = Math.min(usableWidth / (imgWidth / 3.78), usableHeight / (imgHeight / 3.78));
+      const usableWidth = a4Width - (2 * margin);
+      const usableHeight = a4Height - (2 * margin);
 
-      // Calculer combien de pages sont nécessaires
-      const scaledWidth = (imgWidth / 3.78) * ratio;
-      const scaledHeight = (imgHeight / 3.78) * ratio;
+      // Calculer l'échelle pour que l'image tienne sur la page
+      const scaleX = usableWidth / (imgWidth / 3.78);
+      const scaleY = usableHeight / (imgHeight / 3.78);
+      const scale = Math.min(scaleX, scaleY, 1); // Ne pas agrandir
 
-      // Si l'arbre tient sur une page
-      if (scaledWidth <= usableWidth && scaledHeight <= usableHeight) {
-        const pdf = new jsPDF('landscape', 'mm', 'a4');
+      const finalWidth = (imgWidth / 3.78) * scale;
+      const finalHeight = (imgHeight / 3.78) * scale;
 
-        // Centrer l'image
-        const xOffset = margin + (usableWidth - scaledWidth) / 2;
-        const yOffset = margin + (usableHeight - scaledHeight) / 2;
+      // Centrer sur la page
+      const xOffset = margin + (usableWidth - finalWidth) / 2;
+      const yOffset = margin + (usableHeight - finalHeight) / 2;
 
-        pdf.addImage(imgData, 'PNG', xOffset, yOffset, scaledWidth, scaledHeight);
+      const pdf = new jsPDF(orientation, 'mm', 'a4');
+      pdf.addImage(imgData, 'JPEG', xOffset, yOffset, finalWidth, finalHeight);
 
-        // Ajouter le titre et la date
-        pdf.setFontSize(8);
-        pdf.setTextColor(128, 128, 128);
-        pdf.text(`Arbre Généalogique - ${new Date().toLocaleDateString('fr-FR')}`, margin, pdfHeight - 5);
+      // Pied de page
+      pdf.setFontSize(8);
+      pdf.setTextColor(128, 128, 128);
+      pdf.text(`Arbre Généalogique - ${new Date().toLocaleDateString('fr-FR')}`, margin, a4Height - 5);
 
-        pdf.save(`arbre-genealogique-${new Date().toISOString().split('T')[0]}.pdf`);
-      } else {
-        // Multi-pages nécessaires
-        const pdf = new jsPDF('landscape', 'mm', 'a4');
+      pdf.save(`arbre-genealogique-${new Date().toISOString().split('T')[0]}.pdf`);
 
-        // Calculer le nombre de colonnes et lignes nécessaires
-        const pxPerMm = 3.78; // Approximation pixels par mm
-        const pageWidthPx = usableWidth * pxPerMm * 2; // *2 car scale=2
-        const pageHeightPx = usableHeight * pxPerMm * 2;
-
-        const numCols = Math.ceil(imgWidth / pageWidthPx);
-        const numRows = Math.ceil(imgHeight / pageHeightPx);
-
-        let pageCount = 0;
-
-        for (let row = 0; row < numRows; row++) {
-          for (let col = 0; col < numCols; col++) {
-            if (pageCount > 0) {
-              pdf.addPage('a4', 'landscape');
-            }
-
-            // Créer un canvas temporaire pour cette portion
-            const tempCanvas = document.createElement('canvas');
-            const ctx = tempCanvas.getContext('2d');
-
-            const srcX = col * pageWidthPx;
-            const srcY = row * pageHeightPx;
-            const srcWidth = Math.min(pageWidthPx, imgWidth - srcX);
-            const srcHeight = Math.min(pageHeightPx, imgHeight - srcY);
-
-            tempCanvas.width = srcWidth;
-            tempCanvas.height = srcHeight;
-
-            // Fond blanc
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, srcWidth, srcHeight);
-
-            // Dessiner la portion de l'image
-            ctx.drawImage(
-              canvas,
-              srcX, srcY, srcWidth, srcHeight,
-              0, 0, srcWidth, srcHeight
-            );
-
-            const pageImgData = tempCanvas.toDataURL('image/png', 1.0);
-
-            // Calculer les dimensions pour cette page
-            const destWidth = (srcWidth / pxPerMm) / 2; // /2 car scale=2
-            const destHeight = (srcHeight / pxPerMm) / 2;
-
-            pdf.addImage(pageImgData, 'PNG', margin, margin, destWidth, destHeight);
-
-            // Numéro de page
-            pdf.setFontSize(8);
-            pdf.setTextColor(128, 128, 128);
-            pdf.text(`Page ${pageCount + 1}/${numCols * numRows} - Arbre Généalogique`, margin, pdfHeight - 5);
-
-            pageCount++;
-          }
-        }
-
-        pdf.save(`arbre-genealogique-${new Date().toISOString().split('T')[0]}.pdf`);
-      }
-
-      // Restaurer l'état précédent
       setExpandedNodes(previousExpandedNodes);
     } catch (error) {
       console.error('Erreur génération PDF:', error);
-      alert('Erreur lors de la génération du PDF. Essayez avec moins de nœuds développés.');
+      alert('Erreur lors de la génération du PDF.');
       setExpandedNodes(previousExpandedNodes);
     } finally {
       setDownloading(false);
@@ -568,14 +493,12 @@ export const FamilyTree = () => {
 
   // Fonction pour imprimer l'arbre
   const printTree = () => {
-    // Développer tous les nœuds avant impression
     const allParentIds = getAllParentIds();
     setExpandedNodes(allParentIds);
 
-    // Attendre que le DOM se mette à jour puis lancer l'impression
     setTimeout(() => {
       window.print();
-    }, 500);
+    }, 300);
   };
 
   if (loading) return <Loading text="Chargement de l'arbre..." />;
