@@ -96,57 +96,67 @@ const TreeNode = ({ membre, childrenMap, navigate, level = 0, maxDepth = 10, exp
 
       {/* Lignes et enfants */}
       {hasChildren && isExpanded && (
-        <div className="flex flex-col items-center mt-3 sm:mt-4 w-full overflow-visible">
+        <div className="flex flex-col items-center mt-3 sm:mt-4 overflow-visible">
           {/* Ligne verticale descendante */}
           <div className="w-0.5 h-4 sm:h-6 bg-slate-400 flex-shrink-0"></div>
 
-          {/* Conteneur pour ligne horizontale et enfants */}
-          <div className="relative flex flex-col items-center w-full overflow-visible">
-            {/* Ligne horizontale pour les enfants multiples */}
+          {/* Conteneur pour enfants */}
+          <div className="relative inline-flex gap-2 sm:gap-4 flex-nowrap justify-center overflow-visible">
+            {/* Ligne horizontale qui relie le premier au dernier enfant */}
             {enfants.length > 1 && (
-              <div className="absolute top-0 left-0 right-0 flex justify-center overflow-visible" style={{ height: '2px' }}>
-                <div
-                  className="h-0.5 bg-slate-400"
-                  style={{
-                    width: `calc(100% - 40px)`,
-                    maxWidth: `${enfants.length * 120}px`,
-                    minWidth: `${Math.min(enfants.length * 80, 200)}px`
-                  }}
-                ></div>
-              </div>
+              <div
+                className="absolute top-0 h-0.5 bg-slate-400 z-0 pointer-events-none"
+                style={{
+                  left: 'calc(50% / ' + enfants.length + ')',
+                  right: 'calc(50% / ' + enfants.length + ')',
+                }}
+              ></div>
             )}
 
-            {/* Enfants - chaque enfant a sa propre couleur de branche */}
-            <div className="flex gap-2 sm:gap-4 pt-0 flex-nowrap justify-center overflow-visible">
-              {enfants.filter(e => e && e.id).map((enfant, idx) => (
-                <div key={enfant.id} className="relative flex flex-col items-center pt-4 sm:pt-6 flex-shrink-0">
-                  {/* Ligne verticale montante vers la ligne horizontale */}
-                  {enfants.length > 1 && (
-                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-4 sm:h-6 bg-slate-400"></div>
-                  )}
-                  {/* Indicateur de branche coloré */}
-                  {level === 0 && enfants.length > 1 && (
-                    <div
-                      className="absolute top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full z-10"
-                      style={{
-                        backgroundColor: idx === 0 ? '#3b82f6' : idx === 1 ? '#10b981' : idx === 2 ? '#a855f7' : idx === 3 ? '#f59e0b' : '#f43f5e'
-                      }}
-                    ></div>
-                  )}
-                  {/* Récursion pour afficher les descendants */}
-                  <TreeNode
-                    membre={enfant}
-                    childrenMap={childrenMap}
-                    navigate={navigate}
-                    level={level + 1}
-                    maxDepth={maxDepth}
-                    expandedNodes={expandedNodes}
-                    toggleNode={toggleNode}
-                    branchIndex={level === 0 ? idx : branchIndex}
-                  />
-                </div>
-              ))}
-            </div>
+            {enfants.filter(e => e && e.id).map((enfant, idx, arr) => (
+              <div key={enfant.id} className="relative flex flex-col items-center pt-4 sm:pt-6 flex-shrink-0">
+                {/* Ligne verticale vers la ligne horizontale */}
+                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-4 sm:h-6 bg-slate-400 z-0"></div>
+
+                {/* Demi-ligne horizontale gauche (sauf premier enfant) */}
+                {enfants.length > 1 && idx > 0 && (
+                  <div
+                    className="absolute top-0 right-1/2 h-0.5 bg-slate-400 z-0"
+                    style={{ width: 'calc(50% + 4px)', minWidth: '50px' }}
+                  ></div>
+                )}
+
+                {/* Demi-ligne horizontale droite (sauf dernier enfant) */}
+                {enfants.length > 1 && idx < arr.length - 1 && (
+                  <div
+                    className="absolute top-0 left-1/2 h-0.5 bg-slate-400 z-0"
+                    style={{ width: 'calc(50% + 4px)', minWidth: '50px' }}
+                  ></div>
+                )}
+
+                {/* Indicateur de branche coloré */}
+                {level === 0 && enfants.length > 1 && (
+                  <div
+                    className="absolute top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full z-10"
+                    style={{
+                      backgroundColor: idx === 0 ? '#3b82f6' : idx === 1 ? '#10b981' : idx === 2 ? '#a855f7' : idx === 3 ? '#f59e0b' : '#f43f5e'
+                    }}
+                  ></div>
+                )}
+
+                {/* Récursion pour afficher les descendants */}
+                <TreeNode
+                  membre={enfant}
+                  childrenMap={childrenMap}
+                  navigate={navigate}
+                  level={level + 1}
+                  maxDepth={maxDepth}
+                  expandedNodes={expandedNodes}
+                  toggleNode={toggleNode}
+                  branchIndex={level === 0 ? idx : branchIndex}
+                />
+              </div>
+            ))}
           </div>
         </div>
       )}
