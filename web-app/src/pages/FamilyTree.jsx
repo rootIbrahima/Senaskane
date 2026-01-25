@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { arbreAPI } from '../services/api';
 import { Loading, Button } from '../components';
 import { useAuth } from '../contexts/AuthContext';
@@ -408,6 +409,175 @@ export const FamilyTree = () => {
     }
   };
 
+  // Fonction pour générer un PDF multi-pages
+  const downloadTreePDF = async () => {
+    if (!treeRef.current) return;
+
+    setDownloading(true);
+
+    // Sauvegarder l'état actuel des nœuds développés
+    const previousExpandedNodes = new Set(expandedNodes);
+
+    // Développer tous les nœuds pour la capture
+    const allParentIds = getAllParentIds();
+    setExpandedNodes(allParentIds);
+
+    // Attendre que le DOM se mette à jour
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    try {
+      const element = treeRef.current;
+
+      // Calculer les dimensions réelles
+      const scrollWidth = element.scrollWidth;
+      const scrollHeight = element.scrollHeight;
+
+      // Capturer l'arbre en haute qualité
+      const canvas = await html2canvas(element, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        width: scrollWidth,
+        height: scrollHeight,
+        windowWidth: scrollWidth + 100,
+        windowHeight: scrollHeight + 100,
+        scrollX: 0,
+        scrollY: 0,
+        onclone: (clonedDoc, clonedElement) => {
+          clonedElement.style.overflow = 'visible';
+          clonedElement.style.position = 'relative';
+          let parent = clonedElement.parentElement;
+          while (parent) {
+            parent.style.overflow = 'visible';
+            parent = parent.parentElement;
+          }
+        }
+      });
+
+      // Créer le PDF
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+
+      // Format A4 en paysage pour plus d'espace horizontal
+      const pdfWidth = 297; // A4 paysage largeur en mm
+      const pdfHeight = 210; // A4 paysage hauteur en mm
+      const margin = 10; // Marge en mm
+
+      const usableWidth = pdfWidth - (2 * margin);
+      const usableHeight = pdfHeight - (2 * margin);
+
+      // Calculer le ratio pour adapter l'image
+      const ratio = Math.min(usableWidth / (imgWidth / 3.78), usableHeight / (imgHeight / 3.78));
+
+      // Calculer combien de pages sont nécessaires
+      const scaledWidth = (imgWidth / 3.78) * ratio;
+      const scaledHeight = (imgHeight / 3.78) * ratio;
+
+      // Si l'arbre tient sur une page
+      if (scaledWidth <= usableWidth && scaledHeight <= usableHeight) {
+        const pdf = new jsPDF('landscape', 'mm', 'a4');
+
+        // Centrer l'image
+        const xOffset = margin + (usableWidth - scaledWidth) / 2;
+        const yOffset = margin + (usableHeight - scaledHeight) / 2;
+
+        pdf.addImage(imgData, 'PNG', xOffset, yOffset, scaledWidth, scaledHeight);
+
+        // Ajouter le titre et la date
+        pdf.setFontSize(8);
+        pdf.setTextColor(128, 128, 128);
+        pdf.text(`Arbre Généalogique - ${new Date().toLocaleDateString('fr-FR')}`, margin, pdfHeight - 5);
+
+        pdf.save(`arbre-genealogique-${new Date().toISOString().split('T')[0]}.pdf`);
+      } else {
+        // Multi-pages nécessaires
+        const pdf = new jsPDF('landscape', 'mm', 'a4');
+
+        // Calculer le nombre de colonnes et lignes nécessaires
+        const pxPerMm = 3.78; // Approximation pixels par mm
+        const pageWidthPx = usableWidth * pxPerMm * 2; // *2 car scale=2
+        const pageHeightPx = usableHeight * pxPerMm * 2;
+
+        const numCols = Math.ceil(imgWidth / pageWidthPx);
+        const numRows = Math.ceil(imgHeight / pageHeightPx);
+
+        let pageCount = 0;
+
+        for (let row = 0; row < numRows; row++) {
+          for (let col = 0; col < numCols; col++) {
+            if (pageCount > 0) {
+              pdf.addPage('a4', 'landscape');
+            }
+
+            // Créer un canvas temporaire pour cette portion
+            const tempCanvas = document.createElement('canvas');
+            const ctx = tempCanvas.getContext('2d');
+
+            const srcX = col * pageWidthPx;
+            const srcY = row * pageHeightPx;
+            const srcWidth = Math.min(pageWidthPx, imgWidth - srcX);
+            const srcHeight = Math.min(pageHeightPx, imgHeight - srcY);
+
+            tempCanvas.width = srcWidth;
+            tempCanvas.height = srcHeight;
+
+            // Fond blanc
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, srcWidth, srcHeight);
+
+            // Dessiner la portion de l'image
+            ctx.drawImage(
+              canvas,
+              srcX, srcY, srcWidth, srcHeight,
+              0, 0, srcWidth, srcHeight
+            );
+
+            const pageImgData = tempCanvas.toDataURL('image/png', 1.0);
+
+            // Calculer les dimensions pour cette page
+            const destWidth = (srcWidth / pxPerMm) / 2; // /2 car scale=2
+            const destHeight = (srcHeight / pxPerMm) / 2;
+
+            pdf.addImage(pageImgData, 'PNG', margin, margin, destWidth, destHeight);
+
+            // Numéro de page
+            pdf.setFontSize(8);
+            pdf.setTextColor(128, 128, 128);
+            pdf.text(`Page ${pageCount + 1}/${numCols * numRows} - Arbre Généalogique`, margin, pdfHeight - 5);
+
+            pageCount++;
+          }
+        }
+
+        pdf.save(`arbre-genealogique-${new Date().toISOString().split('T')[0]}.pdf`);
+      }
+
+      // Restaurer l'état précédent
+      setExpandedNodes(previousExpandedNodes);
+    } catch (error) {
+      console.error('Erreur génération PDF:', error);
+      alert('Erreur lors de la génération du PDF. Essayez avec moins de nœuds développés.');
+      setExpandedNodes(previousExpandedNodes);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  // Fonction pour imprimer l'arbre
+  const printTree = () => {
+    // Développer tous les nœuds avant impression
+    const allParentIds = getAllParentIds();
+    setExpandedNodes(allParentIds);
+
+    // Attendre que le DOM se mette à jour puis lancer l'impression
+    setTimeout(() => {
+      window.print();
+    }, 500);
+  };
+
   if (loading) return <Loading text="Chargement de l'arbre..." />;
 
   return (
@@ -443,10 +613,10 @@ export const FamilyTree = () => {
             </div>
 
             {view === 'tree' && (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={expandAllNodes}
-                  className="px-3 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-all shadow-sm flex items-center gap-2 font-semibold text-sm sm:text-base"
+                  className="px-3 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-all shadow-sm flex items-center gap-2 font-semibold text-sm sm:text-base print:hidden"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="15 3 21 3 21 9"></polyline>
@@ -454,12 +624,28 @@ export const FamilyTree = () => {
                     <line x1="21" y1="3" x2="14" y2="10"></line>
                     <line x1="3" y1="21" x2="10" y2="14"></line>
                   </svg>
-                  <span className="hidden sm:inline">Tout développer</span>
+                  <span className="hidden sm:inline">Développer</span>
                 </button>
+                {/* Bouton Image PNG */}
                 <button
                   onClick={downloadTree}
                   disabled={downloading}
-                  className="px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-semibold text-sm sm:text-base"
+                  className="px-3 sm:px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-lg hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-semibold text-sm sm:text-base print:hidden"
+                  title="Télécharger en image PNG"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                  <span className="hidden sm:inline">PNG</span>
+                </button>
+                {/* Bouton PDF */}
+                <button
+                  onClick={downloadTreePDF}
+                  disabled={downloading}
+                  className="px-3 sm:px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-semibold text-sm sm:text-base print:hidden"
+                  title="Télécharger en PDF multi-pages"
                 >
                   {downloading ? (
                     <>
@@ -467,18 +653,33 @@ export const FamilyTree = () => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      <span className="hidden sm:inline">Téléchargement...</span>
+                      <span className="hidden sm:inline">...</span>
                     </>
                   ) : (
                     <>
                       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="7 10 12 15 17 10"></polyline>
-                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
                       </svg>
-                      <span className="hidden sm:inline">Télécharger</span>
+                      <span className="hidden sm:inline">PDF</span>
                     </>
                   )}
+                </button>
+                {/* Bouton Imprimer */}
+                <button
+                  onClick={printTree}
+                  className="px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md flex items-center gap-2 font-semibold text-sm sm:text-base print:hidden"
+                  title="Imprimer (Ctrl+P)"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                  </svg>
+                  <span className="hidden sm:inline">Imprimer</span>
                 </button>
               </div>
             )}
