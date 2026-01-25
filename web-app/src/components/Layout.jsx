@@ -123,11 +123,10 @@ export const Layout = ({ children }) => {
           <div className="max-w-7xl mx-auto px-4 lg:px-8 py-4">
             <div className="flex flex-col md:flex-row justify-between items-center gap-2 text-sm text-slate-600">
               <div className="flex items-center gap-2">
-                <span>Made with</span>
-                <span className="text-rose-500 animate-pulse">❤️</span>
-                <span>by Baïla Team</span>
+                <span>Application offert</span>
+                <span>Par la Team Baïla </span>
               </div>
-              <div className="text-slate-500">© 2024 Tous droits réservés</div>
+              <div className="text-slate-500">© 2026 Tous droits réservés</div>
             </div>
           </div>
         </footer>
