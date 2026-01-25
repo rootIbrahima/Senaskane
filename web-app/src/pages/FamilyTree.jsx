@@ -314,28 +314,65 @@ export const FamilyTree = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Fonction pour obtenir tous les IDs des membres avec enfants
+  const getAllParentIds = () => {
+    const parentIds = new Set();
+    arbre.liens.forEach(lien => {
+      if (lien && lien.parent_id) {
+        parentIds.add(lien.parent_id);
+      }
+    });
+    return parentIds;
+  };
+
+  // Fonction pour développer tous les nœuds
+  const expandAllNodes = () => {
+    const allParentIds = getAllParentIds();
+    setExpandedNodes(allParentIds);
+  };
+
   const downloadTree = async () => {
     if (!treeRef.current) return;
 
     setDownloading(true);
+
+    // Sauvegarder l'état actuel des nœuds développés
+    const previousExpandedNodes = new Set(expandedNodes);
+
+    // Développer tous les nœuds pour la capture
+    const allParentIds = getAllParentIds();
+    setExpandedNodes(allParentIds);
+
+    // Attendre que le DOM se mette à jour
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     try {
       // Ajouter une classe temporaire pour le style d'export
       treeRef.current.classList.add('exporting');
 
+      // Attendre encore un peu pour le rendu complet
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       const canvas = await html2canvas(treeRef.current, {
         backgroundColor: '#ffffff',
-        scale: 3,
+        scale: 2,
         logging: false,
         useCORS: true,
         allowTaint: true,
-        windowWidth: treeRef.current.scrollWidth,
-        windowHeight: treeRef.current.scrollHeight,
+        windowWidth: treeRef.current.scrollWidth + 100,
+        windowHeight: treeRef.current.scrollHeight + 100,
         width: treeRef.current.scrollWidth,
         height: treeRef.current.scrollHeight,
         x: 0,
         y: 0,
         scrollX: 0,
-        scrollY: 0
+        scrollY: 0,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-tree-export]');
+          if (clonedElement) {
+            clonedElement.style.overflow = 'visible';
+          }
+        }
       });
 
       // Retirer la classe temporaire
@@ -345,6 +382,9 @@ export const FamilyTree = () => {
       link.download = `arbre-genealogique-${new Date().toISOString().split('T')[0]}.png`;
       link.href = canvas.toDataURL('image/png', 1.0);
       link.click();
+
+      // Restaurer l'état précédent des nœuds
+      setExpandedNodes(previousExpandedNodes);
     } catch (error) {
       console.error('Erreur téléchargement arbre:', error);
       alert('Erreur lors du téléchargement de l\'arbre');
@@ -352,6 +392,8 @@ export const FamilyTree = () => {
       if (treeRef.current) {
         treeRef.current.classList.remove('exporting');
       }
+      // Restaurer l'état précédent
+      setExpandedNodes(previousExpandedNodes);
     } finally {
       setDownloading(false);
     }
@@ -392,30 +434,44 @@ export const FamilyTree = () => {
             </div>
 
             {view === 'tree' && (
-              <button
-                onClick={downloadTree}
-                disabled={downloading}
-                className="px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-semibold text-sm sm:text-base"
-              >
-                {downloading ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span className="hidden sm:inline">Téléchargement...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                      <polyline points="7 10 12 15 17 10"></polyline>
-                      <line x1="12" y1="15" x2="12" y2="3"></line>
-                    </svg>
-                    <span className="hidden sm:inline">Télécharger</span>
-                  </>
-                )}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={expandAllNodes}
+                  className="px-3 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-all shadow-sm flex items-center gap-2 font-semibold text-sm sm:text-base"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <polyline points="9 21 3 21 3 15"></polyline>
+                    <line x1="21" y1="3" x2="14" y2="10"></line>
+                    <line x1="3" y1="21" x2="10" y2="14"></line>
+                  </svg>
+                  <span className="hidden sm:inline">Tout développer</span>
+                </button>
+                <button
+                  onClick={downloadTree}
+                  disabled={downloading}
+                  className="px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-semibold text-sm sm:text-base"
+                >
+                  {downloading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="hidden sm:inline">Téléchargement...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                      </svg>
+                      <span className="hidden sm:inline">Télécharger</span>
+                    </>
+                  )}
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -693,7 +749,7 @@ export const FamilyTree = () => {
                 }
 
                 return (
-                  <div ref={treeRef} className="py-4 sm:py-8 px-2 sm:px-6 bg-white rounded-xl shadow-sm" style={{ minWidth: 'fit-content' }}>
+                  <div ref={treeRef} data-tree-export="true" className="py-4 sm:py-8 px-2 sm:px-6 bg-white rounded-xl shadow-sm" style={{ minWidth: 'fit-content', overflow: 'visible' }}>
                     <div className="text-center mb-4 sm:mb-8">
                       <h3 className="text-lg sm:text-xl font-bold text-slate-800 mb-1 sm:mb-2">Arbre Généalogique</h3>
                       <p className="text-xs sm:text-sm text-slate-600">
