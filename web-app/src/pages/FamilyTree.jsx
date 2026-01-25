@@ -6,27 +6,38 @@ import { Loading, Button } from '../components';
 import { useAuth } from '../contexts/AuthContext';
 
 // Composant pour une carte de membre dans l'arbre
-const MemberCard = ({ membre, onClick }) => {
+const MemberCard = ({ membre, onClick, color = 'slate' }) => {
+  const colorClasses = {
+    slate: 'border-slate-300 from-slate-600 to-slate-800',
+    blue: 'border-blue-400 from-blue-500 to-blue-700',
+    emerald: 'border-emerald-400 from-emerald-500 to-emerald-700',
+    purple: 'border-purple-400 from-purple-500 to-purple-700',
+    amber: 'border-amber-400 from-amber-500 to-amber-700',
+    rose: 'border-rose-400 from-rose-500 to-rose-700',
+  };
+  const classes = colorClasses[color] || colorClasses.slate;
+  const [borderColor, gradientClasses] = [classes.split(' ')[0], classes.split(' ').slice(1).join(' ')];
+
   return (
-    <div className="relative flex flex-col items-center" style={{ minWidth: '200px' }}>
+    <div className="relative flex flex-col items-center" style={{ minWidth: '120px' }}>
       <div
         onClick={() => onClick(membre.id)}
-        className="bg-white rounded-xl shadow-lg p-4 cursor-pointer hover:shadow-2xl hover:scale-105 transition-all duration-300 border-2 border-slate-300 w-48 relative z-10"
+        className={`bg-white rounded-lg shadow-md p-2 cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 ${borderColor} w-28 relative z-10`}
       >
         <div className="flex flex-col items-center text-center">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl text-white mb-3 shadow-md bg-gradient-to-br from-slate-600 to-slate-800">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg text-white mb-1.5 shadow-sm bg-gradient-to-br ${gradientClasses}`}>
             {membre.sexe === 'M' ? '♂' : '♀'}
           </div>
-          <h3 className="font-bold text-slate-900 text-sm mb-1">
+          <h3 className="font-bold text-slate-900 text-xs mb-0.5 truncate w-full">
             {membre.prenom}
           </h3>
-          <p className="text-xs text-slate-600 mb-2">
+          <p className="text-[10px] text-slate-600 truncate w-full">
             {membre.nom}
           </p>
           {membre.date_naissance && (
-            <p className="text-xs text-blue-700 font-semibold">
+            <p className="text-[10px] text-blue-700 font-semibold mt-0.5">
               {new Date(membre.date_naissance).getFullYear()}
-              {membre.date_deces && ` - ${new Date(membre.date_deces).getFullYear()}`}
+              {membre.date_deces && `-${new Date(membre.date_deces).getFullYear()}`}
             </p>
           )}
         </div>
@@ -35,35 +46,40 @@ const MemberCard = ({ membre, onClick }) => {
   );
 };
 
+// Couleurs pour différencier les branches familiales
+const branchColors = ['blue', 'emerald', 'purple', 'amber', 'rose', 'slate'];
+
 // Composant pour afficher un nœud d'arbre avec ses enfants
-const TreeNode = ({ membre, childrenMap, navigate, level = 0, maxDepth = 10, expandedNodes, toggleNode }) => {
+const TreeNode = ({ membre, childrenMap, navigate, level = 0, maxDepth = 10, expandedNodes, toggleNode, branchIndex = 0 }) => {
   if (!membre || !membre.id) return null;
 
   const enfants = (childrenMap && childrenMap[membre.id]) || [];
   const hasChildren = enfants.length > 0;
   const isExpanded = expandedNodes.has(membre.id);
 
+  // Couleur basée sur l'index de branche
+  const color = branchColors[branchIndex % branchColors.length];
+
   // Limiter la profondeur pour éviter les problèmes de performance
   if (level >= maxDepth) {
     return (
       <div className="flex flex-col items-center">
-        <MemberCard membre={membre} onClick={navigate} />
-        <div className="mt-2 text-xs text-slate-500 italic">
-          Niveau max atteint
+        <MemberCard membre={membre} onClick={navigate} color={color} />
+        <div className="mt-1 text-[10px] text-slate-500 italic">
+          Max
         </div>
       </div>
     );
   }
 
-  // Calculer le texte du bouton une seule fois pour éviter les problèmes de réconciliation React
-  const enfantLabel = enfants.length > 1 ? 'enfants' : 'enfant';
+  // Calculer le texte du bouton
   const buttonIcon = isExpanded ? '▼' : '▶';
-  const buttonText = `${buttonIcon} ${enfants.length} ${enfantLabel}`;
+  const buttonText = `${buttonIcon} ${enfants.length}`;
 
   return (
     <div className="flex flex-col items-center">
       {/* Carte du membre */}
-      <MemberCard membre={membre} onClick={navigate} />
+      <MemberCard membre={membre} onClick={navigate} color={color} />
 
       {/* Bouton d'expansion si enfants */}
       {hasChildren && (
@@ -72,7 +88,7 @@ const TreeNode = ({ membre, childrenMap, navigate, level = 0, maxDepth = 10, exp
             e.stopPropagation();
             toggleNode(membre.id);
           }}
-          className="mt-2 px-3 py-1 bg-blue-600/10 hover:bg-blue-600/20 text-blue-700 rounded-full text-xs font-semibold transition-colors"
+          className="mt-1 px-2 py-0.5 bg-blue-600/10 hover:bg-blue-600/20 text-blue-700 rounded-full text-[10px] font-semibold transition-colors"
         >
           {buttonText}
         </button>
@@ -80,30 +96,39 @@ const TreeNode = ({ membre, childrenMap, navigate, level = 0, maxDepth = 10, exp
 
       {/* Lignes et enfants */}
       {hasChildren && isExpanded && (
-        <div className="flex flex-col items-center mt-8">
+        <div className="flex flex-col items-center mt-4">
           {/* Ligne verticale descendante */}
-          <div className="w-0.5 h-12 bg-gradient-to-b from-primary to-primary/50"></div>
+          <div className="w-0.5 h-6 bg-gradient-to-b from-slate-400 to-slate-300"></div>
 
           {/* Ligne horizontale pour les enfants multiples */}
           {enfants.length > 1 && (
             <div className="relative w-full flex justify-center">
               <div
-                className="h-0.5 bg-gradient-to-r from-primary/50 via-primary to-primary/50 absolute"
+                className="h-0.5 bg-slate-400 absolute"
                 style={{
-                  width: `${Math.min(enfants.length * 220, 1000)}px`,
+                  width: `${Math.min(enfants.length * 140, 800)}px`,
                   top: '0'
                 }}
               ></div>
             </div>
           )}
 
-          {/* Enfants */}
-          <div className="flex gap-8 mt-12 flex-wrap justify-center">
-            {enfants.filter(e => e && e.id).map((enfant) => (
-              <div key={enfant.id} className="relative">
+          {/* Enfants - chaque enfant a sa propre couleur de branche */}
+          <div className="flex gap-4 mt-6 flex-wrap justify-center">
+            {enfants.filter(e => e && e.id).map((enfant, idx) => (
+              <div key={enfant.id} className="relative flex flex-col items-center">
                 {/* Ligne verticale montante vers la ligne horizontale */}
                 {enfants.length > 1 && (
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0.5 h-12 bg-gradient-to-t from-primary to-primary/50"></div>
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0.5 h-6 bg-slate-400"></div>
+                )}
+                {/* Indicateur de branche coloré */}
+                {level === 0 && enfants.length > 1 && (
+                  <div
+                    className={`absolute -top-3 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full bg-${branchColors[(branchIndex + idx) % branchColors.length]}-500`}
+                    style={{
+                      backgroundColor: idx === 0 ? '#3b82f6' : idx === 1 ? '#10b981' : idx === 2 ? '#a855f7' : idx === 3 ? '#f59e0b' : '#f43f5e'
+                    }}
+                  ></div>
                 )}
                 {/* Récursion pour afficher les descendants */}
                 <TreeNode
@@ -114,6 +139,7 @@ const TreeNode = ({ membre, childrenMap, navigate, level = 0, maxDepth = 10, exp
                   maxDepth={maxDepth}
                   expandedNodes={expandedNodes}
                   toggleNode={toggleNode}
+                  branchIndex={level === 0 ? idx : branchIndex}
                 />
               </div>
             ))}
@@ -644,9 +670,9 @@ export const FamilyTree = () => {
                     </div>
 
                     {/* Afficher chaque arbre à partir de chaque racine */}
-                    <div className="flex gap-16 justify-center flex-wrap">
-                      {racines.map(racine => (
-                        <div key={racine.id} className="mb-16">
+                    <div className="flex gap-8 justify-center flex-wrap">
+                      {racines.map((racine, idx) => (
+                        <div key={racine.id} className="mb-8">
                           <TreeNode
                             membre={racine}
                             childrenMap={childrenMap}
@@ -655,6 +681,7 @@ export const FamilyTree = () => {
                             maxDepth={10}
                             expandedNodes={expandedNodes}
                             toggleNode={toggleNode}
+                            branchIndex={idx}
                           />
                         </div>
                       ))}
