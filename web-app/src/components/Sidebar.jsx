@@ -101,7 +101,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         <div className="p-4 border-t border-slate-200 bg-slate-50">
           <div className="text-center">
             <div className="text-xs text-slate-500 font-medium">Version 1.0</div>
-            <div className="text-xs text-slate-400 mt-1">© 2024 Baïla Généa</div>
+            <div className="text-xs text-slate-400 mt-1">© 2026 Baïla Généa</div>
           </div>
         </div>
       )}

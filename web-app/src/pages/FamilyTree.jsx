@@ -19,23 +19,23 @@ const MemberCard = ({ membre, onClick, color = 'slate' }) => {
   const [borderColor, gradientClasses] = [classes.split(' ')[0], classes.split(' ').slice(1).join(' ')];
 
   return (
-    <div className="relative flex flex-col items-center" style={{ minWidth: '120px' }}>
+    <div className="relative flex flex-col items-center flex-shrink-0">
       <div
         onClick={() => onClick(membre.id)}
-        className={`bg-white rounded-lg shadow-md p-2 cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 ${borderColor} w-28 relative z-10`}
+        className={`bg-white rounded-lg shadow-md p-2 sm:p-3 cursor-pointer hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 ${borderColor} min-w-[90px] sm:min-w-[110px] max-w-[130px] relative z-10`}
       >
         <div className="flex flex-col items-center text-center">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg text-white mb-1.5 shadow-sm bg-gradient-to-br ${gradientClasses}`}>
+          <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm sm:text-lg text-white mb-1 sm:mb-1.5 shadow-sm bg-gradient-to-br ${gradientClasses}`}>
             {membre.sexe === 'M' ? '♂' : '♀'}
           </div>
-          <h3 className="font-bold text-slate-900 text-xs mb-0.5 truncate w-full">
+          <h3 className="font-bold text-slate-900 text-[10px] sm:text-xs mb-0.5 break-words text-center leading-tight">
             {membre.prenom}
           </h3>
-          <p className="text-[10px] text-slate-600 truncate w-full">
+          <p className="text-[9px] sm:text-[10px] text-slate-600 break-words text-center leading-tight">
             {membre.nom}
           </p>
           {membre.date_naissance && (
-            <p className="text-[10px] text-blue-700 font-semibold mt-0.5">
+            <p className="text-[9px] sm:text-[10px] text-blue-700 font-semibold mt-0.5">
               {new Date(membre.date_naissance).getFullYear()}
               {membre.date_deces && `-${new Date(membre.date_deces).getFullYear()}`}
             </p>
@@ -96,53 +96,57 @@ const TreeNode = ({ membre, childrenMap, navigate, level = 0, maxDepth = 10, exp
 
       {/* Lignes et enfants */}
       {hasChildren && isExpanded && (
-        <div className="flex flex-col items-center mt-4">
+        <div className="flex flex-col items-center mt-3 sm:mt-4 w-full overflow-visible">
           {/* Ligne verticale descendante */}
-          <div className="w-0.5 h-6 bg-gradient-to-b from-slate-400 to-slate-300"></div>
+          <div className="w-0.5 h-4 sm:h-6 bg-slate-400 flex-shrink-0"></div>
 
-          {/* Ligne horizontale pour les enfants multiples */}
-          {enfants.length > 1 && (
-            <div className="relative w-full flex justify-center">
-              <div
-                className="h-0.5 bg-slate-400 absolute"
-                style={{
-                  width: `${Math.min(enfants.length * 140, 800)}px`,
-                  top: '0'
-                }}
-              ></div>
-            </div>
-          )}
-
-          {/* Enfants - chaque enfant a sa propre couleur de branche */}
-          <div className="flex gap-4 mt-6 flex-wrap justify-center">
-            {enfants.filter(e => e && e.id).map((enfant, idx) => (
-              <div key={enfant.id} className="relative flex flex-col items-center">
-                {/* Ligne verticale montante vers la ligne horizontale */}
-                {enfants.length > 1 && (
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0.5 h-6 bg-slate-400"></div>
-                )}
-                {/* Indicateur de branche coloré */}
-                {level === 0 && enfants.length > 1 && (
-                  <div
-                    className={`absolute -top-3 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full bg-${branchColors[(branchIndex + idx) % branchColors.length]}-500`}
-                    style={{
-                      backgroundColor: idx === 0 ? '#3b82f6' : idx === 1 ? '#10b981' : idx === 2 ? '#a855f7' : idx === 3 ? '#f59e0b' : '#f43f5e'
-                    }}
-                  ></div>
-                )}
-                {/* Récursion pour afficher les descendants */}
-                <TreeNode
-                  membre={enfant}
-                  childrenMap={childrenMap}
-                  navigate={navigate}
-                  level={level + 1}
-                  maxDepth={maxDepth}
-                  expandedNodes={expandedNodes}
-                  toggleNode={toggleNode}
-                  branchIndex={level === 0 ? idx : branchIndex}
-                />
+          {/* Conteneur pour ligne horizontale et enfants */}
+          <div className="relative flex flex-col items-center w-full overflow-visible">
+            {/* Ligne horizontale pour les enfants multiples */}
+            {enfants.length > 1 && (
+              <div className="absolute top-0 left-0 right-0 flex justify-center overflow-visible" style={{ height: '2px' }}>
+                <div
+                  className="h-0.5 bg-slate-400"
+                  style={{
+                    width: `calc(100% - 40px)`,
+                    maxWidth: `${enfants.length * 120}px`,
+                    minWidth: `${Math.min(enfants.length * 80, 200)}px`
+                  }}
+                ></div>
               </div>
-            ))}
+            )}
+
+            {/* Enfants - chaque enfant a sa propre couleur de branche */}
+            <div className="flex gap-2 sm:gap-4 pt-0 flex-nowrap justify-center overflow-visible">
+              {enfants.filter(e => e && e.id).map((enfant, idx) => (
+                <div key={enfant.id} className="relative flex flex-col items-center pt-4 sm:pt-6 flex-shrink-0">
+                  {/* Ligne verticale montante vers la ligne horizontale */}
+                  {enfants.length > 1 && (
+                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-4 sm:h-6 bg-slate-400"></div>
+                  )}
+                  {/* Indicateur de branche coloré */}
+                  {level === 0 && enfants.length > 1 && (
+                    <div
+                      className="absolute top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full z-10"
+                      style={{
+                        backgroundColor: idx === 0 ? '#3b82f6' : idx === 1 ? '#10b981' : idx === 2 ? '#a855f7' : idx === 3 ? '#f59e0b' : '#f43f5e'
+                      }}
+                    ></div>
+                  )}
+                  {/* Récursion pour afficher les descendants */}
+                  <TreeNode
+                    membre={enfant}
+                    childrenMap={childrenMap}
+                    navigate={navigate}
+                    level={level + 1}
+                    maxDepth={maxDepth}
+                    expandedNodes={expandedNodes}
+                    toggleNode={toggleNode}
+                    branchIndex={level === 0 ? idx : branchIndex}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -642,8 +646,8 @@ export const FamilyTree = () => {
           </div>
         ) : (
           // Vue Arbre généalogique - Structure hiérarchique
-          <div className="overflow-x-auto overflow-y-visible pb-8">
-            <div className="inline-block min-w-full px-8">
+          <div className="overflow-x-auto overflow-y-visible pb-8 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <div className="inline-block min-w-full px-2 sm:px-8">
               {(() => {
                 // Trouver les racines de l'arbre (membres sans parents)
                 const racines = arbre.membres.filter(m => {
@@ -679,18 +683,18 @@ export const FamilyTree = () => {
                 }
 
                 return (
-                  <div ref={treeRef} className="py-8 px-4 bg-white rounded-xl" style={{ minWidth: 'fit-content' }}>
-                    <div className="text-center mb-8">
-                      <h3 className="text-xl font-bold text-slate-800 mb-2">Arbre Généalogique</h3>
-                      <p className="text-sm text-slate-600">
+                  <div ref={treeRef} className="py-4 sm:py-8 px-2 sm:px-6 bg-white rounded-xl shadow-sm" style={{ minWidth: 'fit-content' }}>
+                    <div className="text-center mb-4 sm:mb-8">
+                      <h3 className="text-lg sm:text-xl font-bold text-slate-800 mb-1 sm:mb-2">Arbre Généalogique</h3>
+                      <p className="text-xs sm:text-sm text-slate-600">
                         {racines.length} racine{racines.length > 1 ? 's' : ''} • {arbre.membres.length} membre{arbre.membres.length > 1 ? 's' : ''}
                       </p>
                     </div>
 
                     {/* Afficher chaque arbre à partir de chaque racine */}
-                    <div className="flex gap-8 justify-center flex-wrap">
+                    <div className="flex gap-4 sm:gap-8 justify-center flex-nowrap overflow-visible">
                       {racines.map((racine, idx) => (
-                        <div key={racine.id} className="mb-8">
+                        <div key={racine.id} className="mb-4 sm:mb-8 flex-shrink-0">
                           <TreeNode
                             membre={racine}
                             childrenMap={childrenMap}
